@@ -1,0 +1,13 @@
+﻿# 🔒 PRIVADO - Arquivos que NÃO sobem
+.env
+.env.*
+node_modules/
+android/
+ios/
+dist/
+build/
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

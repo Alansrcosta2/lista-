@@ -1,0 +1,22 @@
+{
+  "name": "lista-mercado-plus",
+  "private": true,
+  "version": "1.0.0",
+  "author": "Alan Costa",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  },
+  "dependencies": {
+    "@capacitor-community/image-to-text": "^7.0.0",
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/camera": "^7.0.0",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4"
+  }
+}

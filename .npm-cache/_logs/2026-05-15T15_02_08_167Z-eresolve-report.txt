@@ -1,0 +1,28 @@
+'Log files:
+C:\Users\Alan Costa\Documents\Apps\lista +\.npm-cache\_logs\2026-05-15T15_02_08_167Z-debug-0.log
+
+# npm resolution error report
+
+While resolving: @capacitor-community/image-to-text@8.0.0
+Found: @capacitor/core@7.4.4
+node_modules/@capacitor/core
+  @capacitor/core@"^7.4.4" from the root project
+  peer @capacitor/core@"^7.4.0" from @capacitor/android@7.4.4
+  node_modules/@capacitor/android
+    @capacitor/android@"^7.4.4" from the root project
+  peer @capacitor/core@">=7.0.0" from @capacitor/camera@7.0.5
+  node_modules/@capacitor/camera
+    @capacitor/camera@"^7.0.0" from the root project
+
+Could not resolve dependency:
+peer @capacitor/core@">=8.0.0" from @capacitor-community/image-to-text@8.0.0
+node_modules/@capacitor-community/image-to-text
+  @capacitor-community/image-to-text@"^8.0.0" from the root project
+
+Conflicting peer dependency: @capacitor/core@8.3.4
+node_modules/@capacitor/core
+  peer @capacitor/core@">=8.0.0" from @capacitor-community/image-to-text@8.0.0
+  node_modules/@capacitor-community/image-to-text
+    @capacitor-community/image-to-text@"^8.0.0" from the root project
+
+Fix the upstream dependency conflict, or retry this command with --force or --legacy-peer-deps to accept an incorrect (and potentially broken) dependency resolution.

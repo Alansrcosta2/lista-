@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Lista +</title>
+    <style>
+        html,
+        body {
+            background: #000
+        }
+    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon.png">
+    <link rel="icon" type="image/png" href="icons/icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+
+<body data-theme="dark" class="splashing">
+
+    <!-- Splash Screen -->
+    <div class="splash" id="splash">
+        <div class="splash-logo">
+            <img src="icons/splash.png" alt="Lista + Logo">
+        </div>
+        <div class="splash-title">Lista +</div>
+        <div class="splash-bar"><span></span></div>
+        <div class="splash-foot">Carregando...</div>
+    </div>
+
+    <!-- Modal Onboarding -->
+    <div id="modal-onboarding" class="modal-overlay" style="display:none;">
+        <div class="modal-content onboarding-modal">
+            <span class="modal-close" id="fechar-onboarding">&times;</span>
+            <div class="onboarding-hero">
+                <span class="onboarding-icon">🛒</span>
+                <div>
+                    <h2>Bem-vindo ao Lista +</h2>
+                    <p class="onboarding-tagline">O companheiro inteligente para planejar, comprar e economizar no
+                        mercado.</p>
+                </div>
+            </div>
+            <div class="onboarding-features">
+                <div class="feature-card"><span>🧠</span><strong>Planejamento inteligente</strong>
+                    <p>Autocomplete, unidades sugeridas e base local editável.</p>
+                </div>
+                <div class="feature-card"><span>🛍️</span><strong>Modo Mercado</strong>
+                    <p>Registrar preços, pendências de peso para itens por kg, lixeira para remover.</p>
+                </div>
+                <div class="feature-card"><span>🗺️</span><strong>Lojas próximas</strong>
+                    <p>Encontre supermercados perto de você e abra rotas no Maps.</p>
+                </div>
+                <div class="feature-card"><span>📦</span><strong>Importar/Exportar</strong>
+                    <p>Backup completo com prévia de importação e validação.</p>
+                </div>
+                <div class="feature-card"><span>🌙</span><strong>Tema com ícones</strong>
+                    <p>Alternar claro/escuro com ícones visuais no cabeçalho.</p>
+                </div>
+            </div>
+            <div class="onboarding-steps">
+                <h3>Como começar</h3>
+                <ol>
+                    <li><strong>Monte sua lista</strong> em casa adicionando produtos e quantidades.</li>
+                    <li><strong>Toque em “Ir para Mercado”</strong> para registrar preços e marcar itens.</li>
+                    <li><strong>Use o botão 🗺️</strong> para localizar supermercados perto de você.</li>
+                    <li><strong>Acompanhe tudo</strong> pelo menu ⋯ → Relatórios.</li>
+                </ol>
+            </div>
+            <div class="onboarding-extras">
+                <h4>Dicas rápidas</h4>
+                <ul>
+                    <li>🌙 Alterne entre tema claro/escuro no ícone do cabeçalho.</li>
+                    <li>💾 Salve listas no menu para reutilizar em próximas compras.</li>
+                    <li>📦 Importe ou exporte dados para backup em um toque.</li>
+                </ul>
+            </div>
+            <div class="onboarding-actions">
+                <button id="onboarding-next" class="primary-action">Começar agora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Maps -->
+    <div id="modal-maps" class="modal-overlay" style="display:none;">
+        <div class="modal-content modal-maps">
+            <button class="modal-close" id="fechar-maps" aria-label="Fechar">&times;</button>
+            <div class="modal-maps-header">
+                <div class="modal-maps-icon" aria-hidden="true">
+                    <svg class="gps-icon gps-icon-lg" viewBox="0 0 20 20">
+                        <path fill="currentColor"
+                            d="M10 2C6.41 2 3.5 4.91 3.5 8.5c0 4.34 6.5 9.5 6.5 9.5s6.5-5.16 6.5-9.5C16.5 4.91 13.59 2 10 2Zm0 14.03C8.1 14.3 5 10.97 5 8.5 5 5.74 7.24 3.5 10 3.5s5 2.24 5 5c0 2.47-3.1 5.8-5 7.53Z" />
+                        <path fill="currentColor" d="M10 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2>Supermercados próximos</h2>
+                    <p class="modal-maps-subtitle">Mostramos as opções mais perto de você com base na sua localização
+                        atual.</p>
+                </div>
+            </div>
+            <div class="modal-maps-body">
+                <button id="maps-nearest" class="maps-primary-btn">Procurar supermercados agora</button>
+                <div id="maps-loading" class="modal-maps-loading" style="display:none;">⏳ Buscando supermercados
+                    próximos...</div>
+                <div id="maps-list" class="modal-maps-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajuda -->
+    <div id="modal-ajuda" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <span class="modal-close" id="fechar-ajuda">&times;</span>
+            <h2>Como usar</h2>
+            <div class="modal-body">
+                <h4>1. Planeje sua lista (em casa)</h4>
+                <div>1) Digite o nome do produto • 2) Quantidade • 3) Unidade sugerida (mude se quiser) • 4) Adicionar
+                </div>
+                <div style="color: var(--text-secondary); margin:6px 0;">Sugestões: carne/fruta→ kg • ovo→ dúzia/pente •
+                    arroz/feijão→ pacote</div>
+                <h4 style="margin-top:10px;">2. No mercado</h4>
+                <div>1) Ir para Mercado • 2) Clique no item • 3) Ajuste preço e quantidade real • 4) Marcar como
+                    Comprado</div>
+                <div>O total e o histórico são atualizados automaticamente.</div>
+                <h4 style="margin-top:10px;">3. Após o caixa</h4>
+                <div>Corrija pesos/quantidades ou salve a lista no menu ⋯.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Prévia Importação -->
+    <div id="modal-import-preview" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <span class="modal-close" id="fechar-import-preview">&times;</span>
+            <h2>Prévia da Importação</h2>
+            <div id="import-preview-errors" class="modal-body" style="color:#ef4444; display:none;"></div>
+            <div id="import-preview-summary" class="modal-body"></div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+                <button id="cancelar-import" class="config-btn">Cancelar</button>
+                <button id="aplicar-import" class="config-btn"
+                    style="background: var(--primary-color); color:#fff; border:none;">Aplicar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container glass">
+        <header>
+            <h1>🛒 Lista +</h1>
+            <div class="header-icons">
+                <button id="theme-toggle" title="Alternar Tema" aria-label="Alternar Tema" class="icon-btn theme-btn">
+                    <img src="menu-icons/lua-crescente.png" alt="Alternar para tema claro" class="theme-icon"
+                        loading="lazy" />
+                </button>
+                <button id="share-btn" title="Compartilhar" aria-label="Compartilhar" class="icon-btn whatsapp-btn">
+                    <img src="menu-icons/icons8-logotipo-do-whatsapp-100.png" alt="Compartilhar" class="share-icon"
+                        loading="lazy" />
+                </button>
+                <button id="maps-btn" title="Abrir mapas" aria-label="Abrir mapas" class="icon-btn maps-btn">
+                    <img src="menu-icons/marcador-de-localizacao.png" alt="Abrir mapas" class="share-icon"
+                        loading="lazy" />
+                </button>
+                <button id="ai-scan-btn" title="Scanner de Corredor IA" aria-label="Scanner de Corredor IA" class="icon-btn ai-btn">
+                    <span style="font-size: 1.4rem;">🧠</span>
+                </button>
+                <button id="menu-btn" title="Abrir menu" aria-label="Abrir menu" class="icon-btn">
+                    <img src="menu-icons/definicoes.png" alt="Abrir menu" class="share-icon" loading="lazy" />
+                </button>
+            </div>
+        </header>
+        <!-- Dropdown de ações -->
+        <div id="header-menu" class="header-menu" style="display:none;">
+            <button class="header-menu-close" aria-label="Fechar menu">&times;</button>
+            <button data-action="config">Configurações</button>
+            <button data-action="ajuda">Ajuda</button>
+            <button data-action="apagar">Apagar Lista</button>
+            <button data-action="salvar">Salvar Lista</button>
+            <button data-action="abrir">Abrir Lista Salva</button>
+            <button data-action="exportar">Exportar Dados</button>
+            <button data-action="importar">Importar Dados</button>
+        </div>
+
+        <div id="form-planejamento">
+            <div class="form-grid-planejamento">
+                <div class="autocomplete-container">
+                    <input type="text" id="nome" placeholder="Nome do Produto" aria-label="Nome do produto">
+                    <div id="autocomplete-list" class="autocomplete-items"></div>
+                </div>
+                <input type="number" id="quantidade" placeholder="Qtd" min="1" value="1" aria-label="Quantidade">
+                <select id="unidade" aria-label="Unidade">
+                    <option value="un">un</option>
+                    <option value="kg">kg</option>
+                </select>
+                <input type="number" id="corredor" placeholder="Corredor" min="1" aria-label="Número do corredor">
+                <small id="unidade-hint" class="field-hint" style="display:none;"></small>
+                <button id="adicionar" class="verde">Adicionar Produto</button>
+                <button id="modo-mercado" class="amarelo">Ir para Mercado</button>
+            </div>
+        </div>
+
+        <div id="form-mercado" style="display: none;">
+            <div class="form-grid-mercado">
+                <div class="autocomplete-container">
+                    <input type="text" id="nome-mercado" placeholder="Selecione um item da lista"
+                        aria-label="Item selecionado">
+                    <div id="autocomplete-mercado-list" class="autocomplete-items"></div>
+                </div>
+                <input type="number" id="valor-mercado" placeholder="Valor Unitário (R$)" step="0.01" min="0"
+                    aria-label="Valor unitário em reais">
+                <input type="number" id="qtd-mercado" placeholder="Qtd real" step="0.001" min="0"
+                    aria-label="Quantidade real">
+                <input type="number" id="peso-mercado" placeholder="Peso (kg)" step="0.001" min="0"
+                    title="Use para itens por kg" aria-label="Peso em quilogramas">
+                <input type="number" id="total-mercado" placeholder="Total (R$)" step="0.01" min="0"
+                    aria-label="Total em reais" style="display:none;">
+                <input type="number" id="packsize-mercado" placeholder="Itens por pack/pente" step="1" min="1"
+                    aria-label="Tamanho do pack ou pente" style="display:none;">
+                <div id="indicador-preco" class="indicador-preco" style="grid-column: 1 / -1; display:none;"></div>
+                <button id="adicionar-comprado" class="verde">Marcar como Comprado</button>
+                
+                <button id="marcar-peso-depois" class="amarelo"
+                    title="Para itens por kg, marca comprado sem peso e finaliza depois" style="display:none;">Finalizar
+                    peso depois</button>
+                <button id="voltar-planejamento" class="roxo">Voltar para Planejamento</button>
+            </div>
+        </div>
+
+        <div id="info-mercado" class="info-mercado" style="display: none;">
+            <span id="alerta-faltando"></span>
+            <span id="total-compra"></span>
+        </div>
+
+        <!-- Filtros rápidos no Mercado -->
+        <div id="quick-filters" style="display:none; margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="qf-all" class="config-btn">Todos</button>
+            <button id="qf-kg" class="config-btn">Por kg</button>
+            <button id="qf-pending" class="config-btn">Pendências</button>
+        </div>
+
+        <!-- Navegador de Corredores (Pedido do Usuário) -->
+        <div id="corredor-nav" style="display:none; margin-top:12px; padding: 10px; background: rgba(99,102,241,0.05); border-radius: 12px; border: 1px dashed var(--primary-color);">
+            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--primary-color); display: flex; justify-content: space-between;">
+                <span>Navegador de Corredores</span>
+                <span id="current-corredor-label">Exibindo: Todos</span>
+            </div>
+            <div id="corredor-buttons" style="display:flex; gap:6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
+                <!-- Botões gerados dinamicamente -->
+            </div>
+        </div>
+
+        <div id="lista-wrapper" class="table-wrapper">
+            <table id="lista">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Kg</th>
+                        <th>Preço</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Os itens da lista serão inseridos aqui -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="comprados-section" class="comprados-section" style="display:none; margin-top:18px;">
+            <button id="comprados-toggle" class="section-toggle" aria-expanded="false">
+                <span class="toggle-label">Itens comprados</span>
+                <span id="comprados-count" class="toggle-count">0</span>
+                <span class="toggle-icon">▼</span>
+            </button>
+            <div id="comprados-wrapper" class="table-wrapper" style="display:none;">
+                <table id="lista-comprados">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Peso / Qtd</th>
+                            <th>Preço kg</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    </tbody>
+                </table>
+                <div id="buttons-bar" class="buttons">
+                    <button id="apagar-lista" class="vermelho">Apagar Lista</button>
+                    <button id="salvar-lista" class="verde">Salvar Lista</button>
+                    <button id="abrir-listas" class="azul">Abrir Lista</button>
+                    <button id="abrir-comprados-salvos" class="roxo">Abrir Comprados Salvos</button>
+                    <button id="importar-dados" class="roxo">Importar Dados</button>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <!-- Modal Configurações -->
+    <div id="modal-config" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-config" aria-label="Fechar">&times;</button>
+            <h2>Configurações</h2>
+            <div class="config-section" style="margin-top:12px;">
+                <h4>Preferências</h4>
+                <div class="config-row">
+                    <label for="perfil-local-select">Local de compra</label>
+                    <select id="perfil-local-select" class="config-select">
+                        <option value="supermercado">Supermercado</option>
+                        <option value="feira">Feira</option>
+                        <option value="acougue">Açougue</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <button id="reports-btn" class="config-btn">📊 Abrir Relatórios</button>
+                </div>
+            </div>
+            <div class="config-section" style="margin-top:12px;">
+                <h4>Dados</h4>
+                <p style="color: var(--text-secondary); margin:8px 0;">Limpa listas, comprados, histórico de preços e
+                    tema.</p>
+                <button id="btn-limpar-banco" class="config-btn">Limpar Banco Local</button>
+            </div>
+            <div class="config-section" style="margin-top:16px;">
+                <h4>Itens Novos Sugeridos <small id="local-products-count"
+                        style="margin-left:8px; color: var(--text-secondary); font-weight: 500;">Base local: 0</small>
+                </h4>
+                <p style="color: var(--text-secondary); margin:8px 0;">Itens que você adicionou e não estavam na base.
+                    No
+                    futuro, você poderá editá-los e adicioná-los ao seu banco local.</p>
+                <div id="suggested-products-container" class="modal-body"></div>
+            </div>
+            <div class="config-section" style="margin-top:16px;">
+                <h4>Minha Base Local</h4>
+                <p style="color: var(--text-secondary); margin:8px 0;">Edite unidade ou remova itens adicionados
+                    automaticamente à sua base.</p>
+                <div id="local-base-container" class="modal-body"></div>
+            </div>
+            <div class="config-section about" style="margin-top:16px;">
+                <h4>Sobre o Lista + 🛒</h4>
+                <p style="margin-bottom: 10px;"><strong>Aplicação PWA para planejar e realizar compras com recursos
+                        inteligentes.</strong></p>
+                <p style="margin-bottom: 10px;">Ajuda a organizar listas, registrar preços, escanear códigos de
+                    barras e encontrar lojas próximas.</p>
+                <h5 style="margin-top: 15px;">🚀 Funcionalidades Principais:</h5>
+                <ul style="margin-bottom: 10px; padding-left: 20px;">
+                    <li><strong>Planejamento:</strong> Autocomplete, unidades sugeridas e base local.</li>
+                    <li><strong>Modo Mercado:</strong> Preço por kg/pack, pendências de peso e exclusão por lixeira.
+                    </li>
+                    <li><strong>Scanner:</strong> Leitura de códigos de barras com integração ao OpenFoodFacts.</li>
+                    <li><strong>Mapas:</strong> Busca supermercados próximos e navegação direta.</li>
+                    <li><strong>Relatórios:</strong> Gráficos de gastos e histórico completo.</li>
+                    <li><strong>Tema:</strong> Claro/escuro, PWA offline, instalável.</li>
+                </ul>
+                <p><strong>Versão:</strong> 1.0</p>
+                <p><strong>Desenvolvedor:</strong> Alan Costa</p>
+                
+                <div style="background: rgba(99,102,241,0.1); border: 1px solid var(--primary-color); border-radius: 12px; padding: 15px; margin-top: 20px;">
+                    <h5 style="margin-top: 0; color: var(--primary-color);">👨‍👩‍👧 Uso em Família (Sincronização)</h5>
+                    <p style="font-size: 0.85rem; line-height: 1.4; margin-top: 5px;">Para usar com sua esposa em outro celular:</p>
+                    <ol style="font-size: 0.85rem; padding-left: 20px; margin-top: 8px;">
+                        <li>Vá em <strong>Menu ⋯ → Exportar Dados</strong>.</li>
+                        <li>Envie o arquivo pelo WhatsApp para ela.</li>
+                        <li>No celular dela, ela abre o app e vai em <strong>Importar Dados</strong>.</li>
+                        <li>Escolha o modo <strong>"Merge"</strong> para juntar as listas sem apagar nada!</li>
+                    </ol>
+                </div>
+
+                <p style="margin-top: 15px;"><strong>Email:</strong> <a href="mailto:Alansr79@hotmail.com" class="contact-link">Alansr79@hotmail.com</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Listas Salvas -->
+    <div id="modal-listas" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" id="fechar-listas">&times;</span>
+            <h2>Listas Salvas</h2>
+            <div id="saved-lists-container" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Notificações -->
+
+
+    <!-- Modal Compartilhar -->
+    <div id="modal-share" class="modal-overlay" style="display:none;">
+        <div class="modal-content share-modal">
+            <button class="modal-close" id="fechar-share" aria-label="Fechar">&times;</button>
+            <h2>Compartilhar</h2>
+            <p style="color: var(--text-secondary); margin-bottom:12px;">Escolha o que deseja enviar pelo WhatsApp:</p>
+            <div class="share-actions">
+                <button id="share-option-list" class="share-option">Lista completa</button>
+                <button id="share-option-bought" class="share-option">Itens comprados</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Relatórios -->
+    <div id="modal-relatorios" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-relatorios" aria-label="Fechar">&times;</button>
+            <h2>Relatórios</h2>
+            <div style="display:flex; gap:8px; margin:8px 0; flex-wrap:wrap;">
+                <button class="config-btn" data-periodo="7">Últimos 7 dias</button>
+                <button class="config-btn" data-periodo="30">Últimos 30 dias</button>
+                <button class="config-btn" data-periodo="90">Últimos 90 dias</button>
+                <button class="config-btn" data-periodo="0">Tudo</button>
+                <button id="exportar-relatorio-csv" class="config-btn" style="margin-left:auto;">Exportar CSV</button>
+            </div>
+            <canvas id="relatorio-chart" width="520" height="240" style="width:100%;max-width:560px;margin:8px 0 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-main);"></canvas>
+            <div id="relatorio-conteudo" class="modal-body"></div>
+        </div>
+    </div>
+
+
+
+    <!-- Modal AI Aisle Scanner -->
+    <div id="modal-ai-scanner" class="modal-overlay" style="display:none; padding:0;">
+        <div class="ai-scanner-container">
+            <video id="ai-video" autoplay playsinline muted></video>
+            <canvas id="ai-canvas"></canvas>
+            <div class="ai-scanner-overlay">
+                <div class="scan-frame">
+                    <div class="scan-line"></div>
+                </div>
+                <div class="ai-scanner-info">
+                    <div id="ai-status">Iniciando câmera...</div>
+                    <div id="ai-detected-aisle" class="detected-aisle-badge" style="display:none;"></div>
+                </div>
+                <div class="ai-scanner-actions">
+                    <button id="ai-close-btn" class="ai-action-btn">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="produtos.js" type="module"></script>
+    <script src="main.clean.js" type="module"></script>
+</body>
+
+</html>
