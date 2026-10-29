@@ -3296,5 +3296,37 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     if (syncBtn) syncBtn.style.display = 'none';
   }
 
+
+  // ===== BACKUP AUTOMÁTICO =====
+  function fazerBackupAuto() {
+    try {
+      const data = { lista, boughtItems, priceHistory, localProducts, theme: document.body.dataset.theme || 'light', dataBackup: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lista-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      localStorage.setItem('lastBackup_v1', String(Date.now()));
+      if (typeof showToast === 'function') showToast('💾 Backup salvo!', 'success');
+    } catch (e) { console.log('[backup] erro', e && e.message); }
+  }
+  (function checkBackup() {
+    const last = parseInt(localStorage.getItem('lastBackup_v1') || '0', 10) || 0;
+    const dias = (Date.now() - last) / (24 * 60 * 60 * 1000);
+    if (dias >= 7 || !last) {
+      setTimeout(() => {
+        if (confirm('Já faz ' + (last ? Math.floor(dias) : 'muito tempo') + ' dias do último backup. Fazer backup agora?')) {
+          fazerBackupAuto();
+        } else {
+          localStorage.setItem('lastBackup_v1', String(Date.now()));
+        }
+      }, 4000);
+    }
+  })();
+
 });
 
