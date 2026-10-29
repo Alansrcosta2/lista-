@@ -1,73 +1,40 @@
 # Lista + – Lista de Compras Inteligente
 
 ## 🌟 Visão geral
-Este é um **PWA** (Progressive Web App) completo que permite planejar, comprar e controlar gastos de forma inteligente. A interface foi aprimorada com **glassmorphism**, gradientes, micro‑animações e tipografia moderna (**Inter**). Tudo é totalmente **gratuito** e **open‑source**.
+PWA completo para planejar, comprar e controlar gastos no mercado. Funciona **100% offline**, instalável como app no celular. Sincronização em tempo real entre celulares (Android + iPhone) via código de 6 dígitos.
 
 ## 📦 Tecnologias
-- **HTML5** – estrutura semântica
-- **CSS3** – variáveis, glassmorphism, animações
-- **JavaScript** – lógica de lista, armazenamento em `localStorage`
+- **HTML5 / CSS3 / JavaScript** – estrutura, estilos, lógica
+- **localStorage** – dados ficam no dispositivo
+- **Supabase** (plano grátis) – sincronização em tempo real entre celulares
+- **html5-qrcode** (grátis) – scanner de código de barras
+- **Web Speech API** (grátis) – adicionar itens por voz
 - **Capacitor** – build Android (opcional)
-- **Chart.js** (MIT) – gráficos no modal de relatórios
 
-## 🛠️ Instalação & desenvolvimento
-```bash
-# 1️⃣ Clone o repositório
-git clone <repo‑url>
-cd "lista +"
+## 🛠️ Recursos
+- Lista de compras com autocomplete (707 produtos) e unidade sugerida (kg/un/pacote)
+- Modo Mercado: registrar preço, qtd real, kg, marcar comprado, total em tempo real
+- Pendências de peso (itens por kg não pesados)
+- Histórico de preços ("quanto paguei da última vez")
+- Relatórios por categoria + gráfico + exportar CSV
+- Unidade inteligente (aprende com seu histórico)
+- Sugestões de recompra por recorrência
+- Rollover: itens não comprados voltam na próxima compra
+- Conferência antes de sair (avisa o que faltou)
+- Orçamento com teto de gasto + alerta
+- Scanner de código de barras (câmera ou digitação) + OpenFoodFacts
+- Adicionar por voz (Chrome)
+- Sincronização em tempo real (código de 6 dígitos)
+- Backup automático a cada 7 dias + exportar/importar
+- Tema claro/escuro, PWA offline, instalável
 
-# 2️⃣ Instale dependências (Node.js e npm necessários)
-npm install
-
-# 3️⃣ Inicie o servidor de desenvolvimento
-npm run dev   # abre http://localhost:3000
-```
-> O app funciona como PWA; basta abrir no navegador e instalar.
-
-## 📂 Estrutura de pastas
-```
-├─ index.html          # página principal
-├─ style.css           # estilos premium (glass, gradientes, animações)
-├─ main.clean.js       # lógica da aplicação
-├─ produtos.js         # dados de produtos
-├─ manifest.json       # config PWA
-├─ icons/              # ícones e splash screens
-└─ README.md           # este documento
-```
-
-## 📦 Build para produção
-```bash
-npm run build   # gera arquivos minificados em /dist
-```
-Os arquivos são otimizados com **cssnano** (sem custos).
-
-## 📤 Backup
-Um script PowerShell (`backup_lista_plus.ps1`) foi criado para gerar um `ZIP` com tudo que está em `lista +`. Execute‑o no diretório do projeto:
-```powershell
-./backup_lista_plus.ps1
-```
-
-## 📊 Relatórios
-- Abra o **modal Relatórios** via menu → **Abrir Relatórios**.
-- Selecione o período (7, 30, 90 dias ou tudo).
-- Um gráfico de barras (Chart.js) mostra total gasto por dia.
-- Clique **Exportar CSV** para baixar os dados.
-
-## 🎨 Design premium
-- **Glassmorphism**: classe `.glass` aplicada em containers e modais.
-- **Gradientes**: `body` usa `linear-gradient(135deg, var(--bg-main), var(--bg-surface))`.
-- **Micro‑animações**: `modalFadeIn`, `modalContentIn` etc.
-- **Tipografia**: fonte `Inter` via Google Fonts.
-- **Ripple effect**: efeito de onda nos botões (`button::after`).
-- **Acessibilidade**: `:focus-visible` outlines, cores com contraste WCAG 2.1.
-
-## 🧰 Scripts úteis
-- **Backup** – `backup_lista_plus.ps1`
-- **Limpar banco local** – botão *Limpar Banco Local* no modal Configurações.
-- **Exportar/Importar** – opções no menu.
+## 📤 Sincronização (casal)
+1. Um dos celulares: "🔗 Conectar casal" → "Gerar código" → anotar os 6 dígitos
+2. Outro celular: "Conectar casal" → digitar o mesmo código → "Conectar"
+3. A partir daí, a lista sincroniza em tempo real. Dados ficam no Supabase (privado).
 
 ## 📄 Licença
-Este projeto está licenciado sob a **MIT License** – livre para uso, modificação e distribuição.
+MIT – livre para uso, modificação e distribuição.
 
 ---
-*Feito por **Alan Costa** – © 2025*
+*Feito por **Alan Costa***

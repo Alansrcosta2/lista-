@@ -348,9 +348,12 @@
                 <h5 style="margin-top: 15px;">🚀 Funcionalidades Principais:</h5>
                 <ul style="margin-bottom: 10px; padding-left: 20px;">
                     <li><strong>Planejamento:</strong> Autocomplete, unidades sugeridas e base local.</li>
-                    <li><strong>Modo Mercado:</strong> Preço por kg/pack, pendências de peso e exclusão por lixeira.
-                    </li>
-                    <li><strong>Scanner:</strong> Leitura de códigos de barras com integração ao OpenFoodFacts.</li>
+                    <li><strong>Modo Mercado:</strong> Preço por kg/pack, pendências de peso e exclusão por lixeira.</li>
+                    <li><strong>Scanner:</strong> Leitura de códigos de barras (câmera ou digitação) com OpenFoodFacts.</li>
+                    <li><strong>Voz:</strong> Adicionar itens ditando (Chrome).</li>
+                    <li><strong>Sincronização:</strong> Lista compartilhada em tempo real entre celulares (código de 6 dígitos).</li>
+                    <li><strong>Inteligência:</strong> Sugestões de recompra, rollover, orçamento.</li>
+                    <li><strong>Backup:</strong> Automático a cada 7 dias + exportar/importar.</li>
                     <li><strong>Mapas:</strong> Busca supermercados próximos e navegação direta.</li>
                     <li><strong>Relatórios:</strong> Gráficos de gastos e histórico completo.</li>
                     <li><strong>Tema:</strong> Claro/escuro, PWA offline, instalável.</li>
@@ -445,6 +448,7 @@
             <button class="modal-close" id="fechar-sync" aria-label="Fechar">&times;</button>
             <h2>🔗 Conectar casal</h2>
             <p style="color:var(--text-secondary); margin:6px 0;">Vocês dois digitam o mesmo código de 6 dígitos para compartilhar a lista em tempo real.</p>
+            <p style="color:var(--text-secondary); font-size:0.8rem; margin:4px 0;"><strong>Como funciona:</strong> um de vocês clica "Gerar código" e passa os 6 dígitos para o outro (por WhatsApp, por exemplo). Os dois digitam o mesmo código e clicam "Conectar". A partir daí, qualquer item adicionado, editado ou comprado em um celular aparece no outro em segundos. Os dados ficam no Supabase (privado), não no git.</p>
             <div style="display:flex; gap:8px; margin:10px 0;">
                 <input type="text" id="sync-code" maxlength="6" placeholder="Código (6 dígitos)" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary); text-align:center; font-size:1.2rem; letter-spacing:4px;">
                 <button id="sync-gerar" class="config-btn">Gerar código</button>
