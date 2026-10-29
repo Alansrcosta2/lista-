@@ -1271,7 +1271,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     'leite condensado': { qtd: 395, unidade: 'g' },
     'detergente': { qtd: 500, unidade: 'ml' },
     'leite': { qtd: 1, unidade: 'litro' },
-    'ovo': { qtd: 1, unidade: 'duzia' },
   };
   function packageDefaultFor(nome) {
     const n = String(nome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
