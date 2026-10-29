@@ -3384,14 +3384,12 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       scanAtivo = true;
       await html5QrCode.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 260, height: 160 }, aspectRatio: 1.777778 },
+        { fps: 10, qrbox: { width: 280, height: 150 }, aspectRatio: 1.777778, formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E, Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39 ] },
         async (decodedText) => {
           if (!scanAtivo) return;
+          // cooldown para evitar capturas duplicadas rápidas
           scanAtivo = false;
           if (scanStatus) scanStatus.textContent = 'Código: ' + decodedText + ' — buscando...';
-          await html5QrCode.stop().catch(() => {});
-          try { html5QrCode.clear(); } catch (_) {}
-          // process
           const info = await buscarOpenFoodFacts(decodedText);
           const nome = info ? info.nome : ('Produto ' + decodedText);
           const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
@@ -3407,9 +3405,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
           } else {
             if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
           }
-          if (scanStatus) scanStatus.textContent = 'Adicionado! Escaneie outro ou feche.';
-          // restart
-          setTimeout(() => { if (modalScan && modalScan.style.display !== 'none') iniciarScan(); }, 1200);
+          if (scanStatus) scanStatus.textContent = '✅ ' + nome + ' — aponte para o próximo.';
+          // reativar captura após cooldown (câmera continua ligada)
+          setTimeout(() => { scanAtivo = true; }, 1800);
         },
         () => { /* ignore scan errors */ }
       );
@@ -3428,6 +3426,36 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   }
   if (modalScan) {
     modalScan.addEventListener('click', (e) => { if (e.target === modalScan) pararScan(); });
+  }
+  const scanManual = document.getElementById('scan-manual');
+  const scanManualBtn = document.getElementById('scan-manual-btn');
+  async function processarCodigoManual(ean) {
+    ean = String(ean || '').trim();
+    if (!ean) return;
+    if (scanStatus) scanStatus.textContent = 'Código: ' + ean + ' — buscando...';
+    const info = await buscarOpenFoodFacts(ean);
+    const nome = info ? info.nome : ('Produto ' + ean);
+    const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
+    const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
+    if (!existe) {
+      lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+      if (!existeNaBase(nome)) {
+        const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+        if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) });
+      }
+      salvar(); render();
+      if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome, 'success');
+    } else {
+      if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
+    }
+    if (scanStatus) scanStatus.textContent = '✅ ' + nome;
+    if (scanManual) scanManual.value = '';
+  }
+  if (scanManualBtn) {
+    scanManualBtn.addEventListener('click', () => processarCodigoManual(scanManual ? scanManual.value : ''));
+  }
+  if (scanManual) {
+    scanManual.addEventListener('keydown', (e) => { if (e.key === 'Enter') processarCodigoManual(scanManual.value); });
   }
   // inferUnitFromQty may not exist; define fallback
   if (typeof window.inferUnitFromQty !== 'function' && typeof inferUnitFromQty !== 'function') {
