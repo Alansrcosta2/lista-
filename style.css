@@ -1561,3 +1561,13 @@ body::-webkit-scrollbar-thumb:hover {
     font-size: 1rem;
     font-weight: 600;
 }
+
+/* ===== Fase 3: sugestões e acabou em casa ===== */
+.sugestoes-box { background: var(--bg-surface, rgba(99,102,241,0.06)); border: 1px dashed var(--primary-color, #6366f1); border-radius: 12px; padding: 10px; }
+.sugestoes-box h4 { margin: 0 0 8px; font-size: 0.9rem; color: var(--primary-color, #6366f1); }
+.sugestao-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 8px; margin: 4px 0; background: var(--bg-main, #fff); }
+.sugestao-item button { padding: 4px 10px; border: none; border-radius: 6px; background: var(--primary-color, #6366f1); color: #fff; cursor: pointer; font-size: 0.8rem; }
+.acabou-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color, #eee); cursor: pointer; }
+.acabou-item:hover { background: var(--bg-surface, rgba(99,102,241,0.08)); }
+.acabou-item .nome { font-weight: 500; }
+.acabou-item .add { color: var(--primary-color, #6366f1); font-weight: 700; }

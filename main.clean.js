@@ -95,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     qfPending: document.getElementById('qf-pending'),
     // Busca Online
     searchOpen: document.getElementById('online-search-open'),
-    searchModal: document.getElementById('modal-search'),
     searchClose: document.getElementById('search-close'),
     searchInput: document.getElementById('search-input'),
     searchEan: document.getElementById('search-ean'),
@@ -2004,6 +2003,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       els.compradosTotalBadge.style.display = total > 0 ? '' : 'none';
       els.compradosTotalBadge.textContent = fmt(total);
     }
+    try { atualizarSugestoes(); } catch (_) { }
   }
 
   function renderComprados() {
@@ -2618,7 +2618,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
 
             prevErr.style.display = valid ? 'none' : '';
             prevErr.innerHTML = valid ? '' : ('Erros de schema:<br>' + errors.map(function(e) { return '- ' + e; }).join('<br>'));
-            const prevInfo = document.getElementById('prev-info');
+            const prevInfo = prevSum;
             if (prevInfo) {
               prevInfo.innerHTML = '<div><strong>Modo:</strong> ' + (mode || 'merge') + '</div>' +
                 '<div style="margin-top:6px;">Lista: +' + addCount + ' novos, ~' + updCount + ' atualizar</div>' +
@@ -2852,7 +2852,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-        const isSecure = location.protocol === 'https:' || isLocalhost;
+        const isSecure = location.protocol === 'https:' || isLocalhost || location.protocol === 'file:';
         if (!isSecure) { console.log('[sw] não registrado: contexto inseguro'); return; }
         navigator.serviceWorker.register('./service-worker.js')
           .then(reg => { console.log('[sw] registrado', reg.scope); })
@@ -2860,231 +2860,194 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       });
     }
   } catch (e) { console.log('[sw] init error', e && e.message ? e.message : e); }
-});
-function openSearchModal() { if (els.searchModal) { els.searchModal.style.display = 'flex'; els.searchModal.classList.add('visible'); if (els.searchStatus) els.searchStatus.textContent = ''; if (els.searchResults) els.searchResults.innerHTML = ''; if (els.searchInput) els.searchInput.focus(); } }
-function closeSearchModal() {
-  if (els.searchModal) {
-    els.searchModal.classList.remove('visible');
-    els.searchModal.style.display = 'none';
-    // Limpar campos para não deixar rastro
-    if (els.searchInput) els.searchInput.value = '';
-    if (els.searchEan) els.searchEan.value = '';
-    if (els.searchResults) els.searchResults.innerHTML = '';
-    if (els.searchStatus) els.searchStatus.textContent = '';
-  }
-}
-async function searchOnline() {
-  try {
-    const raw = (els.searchInput && els.searchInput.value) ? String(els.searchInput.value).trim() : '';
-    const ean = (els.searchEan && els.searchEan.value) ? String(els.searchEan.value).replace(/\D/g, '') : '';
-    if (els.searchStatus) els.searchStatus.textContent = 'Buscando...';
-    if (ean && ean.length >= 8) {
-      const data = await fetchOpenFoodFacts(ean);
-      if (data) {
-        const nome = String(data.nome || '') || 'Produto';
-        const img = String(data.img || '');
-        const uni = inferUnitFromQty(String(data.qty || ''));
-        if (els.searchResults) els.searchResults.innerHTML = '<div class="saved-list-item"><span>' + nome + '</span><div class="saved-list-actions"><button class="pick-online" data-n="' + encodeURIComponent(nome) + '" data-code="' + ean + '" data-img="' + encodeURIComponent(img) + '" data-uni="' + uni + '">Adicionar</button></div></div>';
-        if (els.searchStatus) els.searchStatus.textContent = '1 resultado via EAN';
-        return;
-      } else {
-        if (els.searchStatus) els.searchStatus.textContent = 'EAN não encontrado. Tente pelo nome.';
-      }
-    }
-    if (!raw || raw.length < 2) { if (els.searchStatus) els.searchStatus.textContent = 'Digite pelo menos 2 letras.'; return; }
-    const url = 'https://world.openfoodfacts.org/api/v2/search?search_terms=' + encodeURIComponent(raw) + '&page_size=12&fields=code,product_name,brands,quantity,image_small_url,image_front_small_url';
-    const r = await fetch(url);
-    const j = r.ok ? await r.json() : null;
-    const arr = j && Array.isArray(j.products) ? j.products : [];
-    if (els.searchResults) els.searchResults.innerHTML = arr.map(p => {
-      const brand = p.brands ? String(p.brands).split(',')[0].trim() : '';
-      const generic = p.product_name || '';
-      const nome = [brand, generic].filter(Boolean).join(' ') || generic || brand || 'Produto';
-      const img = p.image_small_url || p.image_front_small_url || '';
-      const code = p.code || '';
-      const qty = p.quantity || '';
-      const uni = inferUnitFromQty(qty);
-      return '<div class="saved-list-item"><span>' + nome + '</span><div class="saved-list-actions"><button class="pick-online" data-n="' + encodeURIComponent(nome) + '" data-code="' + code + '" data-img="' + encodeURIComponent(img) + '" data-uni="' + uni + '">Adicionar</button></div></div>';
-    }).join('');
-    if (els.searchStatus) els.searchStatus.textContent = arr.length ? (arr.length + ' resultado(s)') : 'Nada encontrado.';
-  } catch (e) { if (els.searchStatus) els.searchStatus.textContent = 'Erro na busca.'; }
-}
 
-// ===== SISTEMA INTELIGENTE DE RECONHECIMENTO DE CORREDOR (IA) =====
-(function initAIScanner() {
-  const modal = document.getElementById('modal-ai-scanner');
-  const video = document.getElementById('ai-video');
-  const canvas = document.getElementById('ai-canvas');
-  const status = document.getElementById('ai-status');
-  const detectedBadge = document.getElementById('ai-detected-aisle');
-  const closeBtn = document.getElementById('ai-close-btn');
-  const openBtn = document.getElementById('ai-scan-btn');
+  // ===== FASE 3: INTELIGÊNCIA REAL =====
 
-  let stream = null;
-  let scannerActive = false;
-  let worker = null; // Tesseract fallback
-  let lastDetectionTime = 0;
-  let lastDetectedText = '';
+  // --- Modo "Acabou em casa": modal com catálogo, toque adiciona à lista ---
+  const btnAcabou = document.getElementById('btn-acabou');
+  const modalAcabou = document.getElementById('modal-acabou');
+  const fecharAcabou = document.getElementById('fechar-acabou');
+  const acabouBusca = document.getElementById('acabou-busca');
+  const acabouLista = document.getElementById('acabou-lista');
 
-  const sectors = [
-    { key: 'corredor', regex: /corredor\s*(\d+)/i, type: 'aisle' },
-    { key: 'bebidas', regex: /bebidas|sucos|refrigerantes|cervejas/i, type: 'sector', category: 'Bebidas' },
-    { key: 'limpeza', regex: /limpeza|detergente|sabão|desinfetante/i, type: 'sector', category: 'Limpeza' },
-    { key: 'hortifruti', regex: /hortifruti|frutas|verduras|legumes/i, type: 'sector', category: 'Hortifruti' },
-    { key: 'açougue', regex: /açougue|carnes|frango|bovino/i, type: 'sector', category: 'Açougue' },
-    { key: 'laticínios', regex: /laticínios|leite|iogurte|queijos/i, type: 'sector', category: 'Laticínios' },
-    { key: 'padaria', regex: /padaria|pães|bolos|doces/i, type: 'sector', category: 'Padaria' },
-    { key: 'frios', regex: /frios|presunto|queijo|salame/i, type: 'sector', category: 'Frios' },
-    { key: 'mercearia', regex: /mercearia|arroz|feijão|massas/i, type: 'sector', category: 'Mercearia' },
-    { key: 'higiene', regex: /higiene|perfumaria|shampoo|sabonete/i, type: 'sector', category: 'Higiene' }
-  ];
-
-  async function initTesseract() {
-    if (worker) return worker;
-    status.textContent = 'Carregando IA (Fallback)...';
-    worker = await Tesseract.createWorker('por');
-    return worker;
-  }
-
-  async function startScanner() {
+  function getAllCatalog() {
+    const arr = [];
     try {
-      // 1. Pedir permissão via Capacitor se disponível
-      if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) {
-        const perm = await window.ensurePermission('camera');
-        if (!perm) {
-          alert('Permissão de câmera negada.');
-          return;
-        }
-      }
-
-      // 2. Iniciar Stream de Vídeo
-      stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+      if (Array.isArray(window.produtos)) window.produtos.forEach(p => arr.push(p));
+    } catch (_) {}
+    try {
+      if (Array.isArray(localProducts)) localProducts.forEach(p => {
+        if (!arr.some(x => String(x.nome).toLowerCase() === String(p.nome).toLowerCase())) arr.push(p);
       });
-      video.srcObject = stream;
-      modal.style.display = 'flex';
-      scannerActive = true;
-      status.textContent = 'Buscando placas de corredor...';
-      
-      // 3. Loop de processamento
-      processLoop();
-    } catch (err) {
-      console.error('[ai] erro ao abrir câmera', err);
-      alert('Erro ao acessar câmera: ' + (err.message || 'Desconhecido'));
-    }
+    } catch (_) {}
+    return arr;
   }
 
-  function stopScanner() {
-    scannerActive = false;
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    modal.style.display = 'none';
-    video.srcObject = null;
-    lastDetectedText = '';
+  function renderAcabou(filter) {
+    if (!acabouLista) return;
+    const q = String(filter || '').toLowerCase().trim();
+    const cats = getAllCatalog().filter(p => !q || String(p.nome || '').toLowerCase().includes(q));
+    if (!cats.length) { acabouLista.innerHTML = '<em>Nenhum produto encontrado.</em>'; return; }
+    acabouLista.innerHTML = cats.map(p => {
+      const jaNaLista = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(p.nome || '').toLowerCase() && !x.comprado);
+      return '<div class="acabou-item" data-nome="' + encodeURIComponent(p.nome) + '" data-uni="' + (p.unidade || 'un') + '" data-cat="' + (p.categoria || '') + '" data-emoji="' + (p.emoji || '') + '">' +
+        '<span class="nome">' + (p.emoji ? p.emoji + ' ' : '') + p.nome + '</span>' +
+        (jaNaLista ? '<span class="add" style="opacity:0.5;">já na lista</span>' : '<span class="add">+ adicionar</span>') +
+        '</div>';
+    }).join('');
   }
 
-  async function processLoop() {
-    if (!scannerActive) return;
+  function adicionarAcabou(nome, uni, cat, emoji) {
+    const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase() && !x.comprado);
+    if (existe) { if (typeof showToast === 'function') showToast('Já está na lista: ' + nome, 'info'); return; }
+    const itemObj = { nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: cat || catDe(nome), comprado: false, preco: null, total: null };
+    lista.push(itemObj);
+    if (!existeNaBase(nome)) {
+      const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase());
+      if (!existsLocal) { localProducts.push({ nome, categoria: cat || '', unidade: uni || 'un', emoji: emoji || emojiDe(nome) }); }
+    }
+    salvar(); render();
+    if (typeof showToast === 'function') showToast('✅ Adicionado: ' + nome, 'success');
+    renderAcabou(acabouBusca ? acabouBusca.value : '');
+    atualizarSugestoes();
+  }
 
-    const now = Date.now();
-    if (now - lastDetectionTime > 1200) { 
-      lastDetectionTime = now;
-      
-      // Capturar frame atual
-      const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (btnAcabou && modalAcabou) {
+    btnAcabou.addEventListener('click', () => { modalAcabou.style.display = 'flex'; modalAcabou.classList.add('visible'); renderAcabou(''); if (acabouBusca) { acabouBusca.value = ''; acabouBusca.focus(); } });
+  }
+  if (fecharAcabou && modalAcabou) {
+    fecharAcabou.addEventListener('click', () => { modalAcabou.classList.remove('visible'); modalAcabou.style.display = 'none'; });
+    modalAcabou.addEventListener('click', (e) => { if (e.target === modalAcabou) { modalAcabou.classList.remove('visible'); modalAcabou.style.display = 'none'; } });
+  }
+  if (acabouBusca) acabouBusca.addEventListener('input', () => renderAcabou(acabouBusca.value));
+  if (acabouLista) {
+    acabouLista.addEventListener('click', (e) => {
+      const item = e.target.closest('.acabou-item');
+      if (!item) return;
+      adicionarAcabou(decodeURIComponent(item.dataset.nome || ''), item.dataset.uni, item.dataset.cat, item.dataset.emoji);
+    });
+  }
 
-      try {
-        let recognizedText = '';
+  // --- Sugestões automáticas pelo histórico ---
+  const sugestoesContainer = document.getElementById('sugestoes-container');
 
-        // Tentar usar Google ML Kit Nativo (@capacitor-community/image-to-text)
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Ocr) {
-          const result = await window.Capacitor.Plugins.Ocr.detectText({
-            base64: canvas.toDataURL('image/jpeg', 0.8).split(',')[1]
-          });
-          recognizedText = (result.textRegions || []).map(r => r.text).join(' ') || '';
-        } else {
-          // Fallback para Tesseract.js
-          const w = await initTesseract();
-          const { data: { text } } = await w.recognize(canvas);
-          recognizedText = text || '';
-        }
-
-        if (recognizedText) processOCRText(recognizedText);
-      } catch (e) {
-        console.warn('[ai] erro no processamento', e);
+  function calcularSugestoes() {
+    const sug = [];
+    const nomesNaLista = new Set((Array.isArray(lista) ? lista : []).filter(x => !x.comprado).map(x => String(x.nome || '').toLowerCase()));
+    const agora = Date.now();
+    // agrupar comprados por nome
+    const porNome = {};
+    (Array.isArray(boughtItems) ? boughtItems : []).forEach(b => {
+      const k = String(b.nome || '').toLowerCase();
+      if (!k) return;
+      if (!porNome[k]) porNome[k] = [];
+      const t = b.date ? new Date(b.date).getTime() : NaN;
+      if (!isNaN(t)) porNome[k].push(t);
+    });
+    Object.keys(porNome).forEach(k => {
+      if (nomesNaLista.has(k)) return;
+      const datas = porNome[k].sort((a, b) => a - b);
+      if (datas.length < 2) return;
+      // intervalo médio entre compras
+      let soma = 0;
+      for (let i = 1; i < datas.length; i++) soma += (datas[i] - datas[i - 1]);
+      const intervalo = soma / (datas.length - 1);
+      const ultimo = datas[datas.length - 1];
+      // sugere se já passou ~80% do intervalo desde a última compra
+      if (agora - ultimo >= intervalo * 0.8) {
+        // encontra nome original
+        const original = (Array.isArray(boughtItems) ? boughtItems : []).find(b => String(b.nome || '').toLowerCase() === k);
+        sug.push({ nome: original ? original.nome : k, dias: Math.round((agora - ultimo) / (24 * 60 * 60 * 1000)) });
       }
-    }
-
-    if (scannerActive) requestAnimationFrame(processLoop);
+    });
+    return sug.slice(0, 6);
   }
 
-  function processOCRText(text) {
-    const cleanText = text.toLowerCase().trim();
-    if (!cleanText || cleanText === lastDetectedText) return;
-    
-    for (const sector of sectors) {
-      const match = cleanText.match(sector.regex);
-      if (match) {
-        var foundLabel = sector.type === 'aisle' ? ('Corredor ' + match[1]) : sector.category;
-        handleDetection(foundLabel, sector);
-        lastDetectedText = cleanText;
-        break;
-      }
-    }
+  function atualizarSugestoes() {
+    if (!sugestoesContainer) return;
+    const sug = calcularSugestoes();
+    if (!sug.length) { sugestoesContainer.style.display = 'none'; sugestoesContainer.innerHTML = ''; return; }
+    sugestoesContainer.style.display = '';
+    sugestoesContainer.innerHTML = '<h4>💡 Sugestões (compra recorrente)</h4>' +
+      sug.map(s => '<div class="sugestao-item"><span>' + s.nome + ' <small style="color:var(--text-secondary);">(' + s.dias + ' dias)</small></span><button data-nome="' + encodeURIComponent(s.nome) + '">+ lista</button></div>').join('');
   }
 
-  function handleDetection(label, sector) {
-    // Validar se o setor detectado tem itens na lista
-    let hasItems = false;
-    let aisleToFilter = null;
-
-    if (sector.type === 'aisle') {
-      const aisleNum = parseInt(label.replace(/\D/g, ''));
-      hasItems = window.lista.some(it => it.corredor === aisleNum && !it.comprado);
-      if (hasItems) aisleToFilter = aisleNum;
-    } else {
-      const categoryMatch = window.lista.find(it => !it.comprado && (it.categoria || '').toLowerCase() === sector.category.toLowerCase());
-      if (categoryMatch) {
-        hasItems = true;
-        aisleToFilter = categoryMatch.corredor;
-      }
-    }
-
-    if (!hasItems) {
-      status.textContent = '🔍 IA ativa: Reconheceu "' + label + '"';
-      status.style.color = "#fbbf24";
-      setTimeout(function() { if (scannerActive) { status.textContent = 'Buscando placas...'; status.style.color = ''; } }, 2000);
-      return;
-    }
-
-    // Feedback Visual e Tátil
-    detectedBadge.textContent = '📍 ' + label;
-    detectedBadge.style.display = 'block';
-    status.style.color = "#4ade80";
-    status.textContent = '✅ Itens encontrados aqui!';
-    setTimeout(() => { if (scannerActive) { status.style.color = ''; } }, 4000);
-
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-    // Aplicar Filtro no App
-    if (aisleToFilter !== null) {
-      window.currentAisleFilter = aisleToFilter;
-      if (window.render) window.render();
-    }
-
-    // Auto-hide badge
-    setTimeout(() => {
-      if (scannerActive) {
-        detectedBadge.style.display = 'none';
-        status.textContent = 'Buscando placas...';
-      }
-    }, 4000);
+  if (sugestoesContainer) {
+    sugestoesContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const nome = decodeURIComponent(btn.dataset.nome || '');
+      // acha unidade no catálogo ou base
+      let uni = 'un';
+      const p = getAllCatalog().find(x => String(x.nome).toLowerCase() === nome.toLowerCase());
+      if (p && p.unidade) uni = p.unidade;
+      adicionarAcabou(nome, uni, p ? p.categoria : catDe(nome), p ? p.emoji : emojiDe(nome));
+    });
   }
 
-  if (openBtn) openBtn.addEventListener('click', startScanner);
-  if (closeBtn) closeBtn.addEventListener('click', stopScanner);
-})();
+  try { atualizarSugestoes(); } catch (_) {}
+
+  // --- Conferência antes de sair do mercado ---
+  const modalConf = document.getElementById('modal-conferencia');
+  const confConteudo = document.getElementById('conferencia-conteudo');
+  const confContinuar = document.getElementById('conf-continuar');
+  const confSair = document.getElementById('conf-sair');
+  let confResolver = null;
+
+  function mostrarConferencia() {
+    const faltando = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
+    if (!faltando.length) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      confResolver = resolve;
+      if (confConteudo) {
+        confConteudo.innerHTML = '<p><strong>Faltaram ' + faltando.length + ' item(ns):</strong></p>' +
+          '<ul style="margin:6px 0 0 18px;">' + faltando.map(x => '<li>' + (emojiDe(x.nome) || '') + ' ' + x.nome + ' (' + x.qtd + ' ' + x.unidade + ')</li>').join('') + '</ul>' +
+          '<p style="margin-top:8px; color:var(--text-secondary);">Deseja sair mesmo assim?</p>';
+      }
+      if (modalConf) { modalConf.style.display = 'flex'; modalConf.classList.add('visible'); }
+    });
+  }
+
+  if (confContinuar && modalConf) {
+    confContinuar.addEventListener('click', () => { modalConf.classList.remove('visible'); modalConf.style.display = 'none'; if (confResolver) { confResolver(false); confResolver = null; } });
+  }
+  if (confSair && modalConf) {
+    confSair.addEventListener('click', () => { modalConf.classList.remove('visible'); modalConf.style.display = 'none'; if (confResolver) { confResolver(true); confResolver = null; } });
+  }
+
+  // interceptar voltar para planejamento
+  if (els.voltarPlan) {
+    // wrap existing handler by re-binding: remove old listeners not possible; instead add capture-phase guard
+  }
+  // We'll patch the button click via a capture listener that prevents default and shows conf
+  const voltarBtn = els.voltarPlan;
+  if (voltarBtn) {
+    voltarBtn.addEventListener('click', async (e) => {
+      // only act if market mode active
+      if (!modoMercadoAtivo) return;
+      const faltando = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
+      if (!faltando.length) return; // let original handler run
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      const sair = await mostrarConferencia();
+      if (sair) {
+        modoMercadoAtivo = false; selecionado = null;
+        if (els.formPlan) els.formPlan.style.display = '';
+        if (els.formMercado) els.formMercado.style.display = 'none';
+        document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = 'none');
+        listaColapsada = false;
+        if (els.listaWrapper) els.listaWrapper.style.display = '';
+        if (els.quickFilters) els.quickFilters.style.display = 'none';
+        quickFilter = 'all';
+        render(); atualizarInfoMercado();
+      }
+    }, true);
+  }
+
+  // showToast helper (caso não exista)
+  if (typeof window.showToast !== 'function') {
+    window.showToast = function(msg) { console.log('[toast]', msg); };
+  }
+
+});
+

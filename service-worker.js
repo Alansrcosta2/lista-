@@ -1,13 +1,21 @@
-var CACHE_NAME = 'lista-mercado-cache-v7';
+var CACHE_NAME = 'lista-mercado-cache-v8';
 var ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=5',
+  '/style.css',
   '/main.clean.js',
   '/produtos.js',
   '/manifest.json',
   '/icons/icon.png',
-  '/icons/splash.png'
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/splash.png',
+  '/menu-icons/sol.png',
+  '/menu-icons/lua-crescente.png',
+  '/menu-icons/definicoes.png',
+  '/menu-icons/icons8-lixeira-480.png',
+  '/menu-icons/icons8-logotipo-do-whatsapp-100.png',
+  '/menu-icons/marcador-de-localizacao.png'
 ];
 
 self.addEventListener('install', function(event) {

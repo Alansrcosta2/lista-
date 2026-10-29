@@ -20,7 +20,6 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon.png">
     <link rel="icon" type="image/png" href="icons/icon.png">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 
 <body data-theme="dark" class="splashing">
@@ -166,9 +165,6 @@
                     <img src="menu-icons/marcador-de-localizacao.png" alt="Abrir mapas" class="share-icon"
                         loading="lazy" />
                 </button>
-                <button id="ai-scan-btn" title="Scanner de Corredor IA" aria-label="Scanner de Corredor IA" class="icon-btn ai-btn">
-                    <span style="font-size: 1.4rem;">🧠</span>
-                </button>
                 <button id="menu-btn" title="Abrir menu" aria-label="Abrir menu" class="icon-btn">
                     <img src="menu-icons/definicoes.png" alt="Abrir menu" class="share-icon" loading="lazy" />
                 </button>
@@ -201,7 +197,9 @@
                 <small id="unidade-hint" class="field-hint" style="display:none;"></small>
                 <button id="adicionar" class="verde">Adicionar Produto</button>
                 <button id="modo-mercado" class="amarelo">Ir para Mercado</button>
+                <button id="btn-acabou" class="roxo">🏠 Acabou em casa</button>
             </div>
+            <div id="sugestoes-container" class="sugestoes-box" style="display:none; margin-top:10px;"></div>
         </div>
 
         <div id="form-mercado" style="display: none;">
@@ -286,7 +284,6 @@
                             <th>Total</th>
                         </tr>
                     </thead>
-                    </tbody>
                 </table>
                 <div id="buttons-bar" class="buttons">
                     <button id="apagar-lista" class="vermelho">Apagar Lista</button>
@@ -420,22 +417,25 @@
 
 
 
-    <!-- Modal AI Aisle Scanner -->
-    <div id="modal-ai-scanner" class="modal-overlay" style="display:none; padding:0;">
-        <div class="ai-scanner-container">
-            <video id="ai-video" autoplay playsinline muted></video>
-            <canvas id="ai-canvas"></canvas>
-            <div class="ai-scanner-overlay">
-                <div class="scan-frame">
-                    <div class="scan-line"></div>
-                </div>
-                <div class="ai-scanner-info">
-                    <div id="ai-status">Iniciando câmera...</div>
-                    <div id="ai-detected-aisle" class="detected-aisle-badge" style="display:none;"></div>
-                </div>
-                <div class="ai-scanner-actions">
-                    <button id="ai-close-btn" class="ai-action-btn">Fechar</button>
-                </div>
+    <!-- Modal Acabou em Casa -->
+    <div id="modal-acabou" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-acabou" aria-label="Fechar">&times;</button>
+            <h2>🏠 Acabou em casa</h2>
+            <p style="color:var(--text-secondary); margin:6px 0;">Toque no item que acabou para adicioná-lo à lista de compras.</p>
+            <input type="text" id="acabou-busca" placeholder="Buscar produto..." style="width:100%; padding:8px; margin:8px 0; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);">
+            <div id="acabou-lista" class="modal-body" style="max-height:50vh; overflow:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Conferência -->
+    <div id="modal-conferencia" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2>📋 Conferência da compra</h2>
+            <div id="conferencia-conteudo" class="modal-body"></div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                <button id="conf-continuar" class="config-btn">Continuar comprando</button>
+                <button id="conf-sair" class="config-btn" style="background:var(--primary-color); color:#fff; border:none;">Sair assim mesmo</button>
             </div>
         </div>
     </div>
