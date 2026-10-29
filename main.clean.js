@@ -2161,7 +2161,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         nome,
         qtd,
         unidade: uni,
-        corredor: null,
         categoria: catDe(nome),
         comprado: false,
         preco: null,
@@ -2208,7 +2207,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
           itens.forEach(nome => {
             const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
             if (!existe) {
-              lista.push({ nome, qtd: 1, unidade: 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+              lista.push({ nome, qtd: 1, unidade: 'un', categoria: catDe(nome), comprado: false, preco: null, total: null });
               if (!existeNaBase(nome)) {
                 const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
                 if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: 'un', emoji: emojiDe(nome) });
@@ -3025,7 +3024,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       // adiciona à lista (evita duplicata)
       const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase() && !x.comprado);
       if (!existe) {
-        lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: (p && p.categoria) ? p.categoria : catDe(nome), comprado: false, preco: null, total: null });
+        lista.push({ nome, qtd: 1, unidade: uni || 'un', categoria: (p && p.categoria) ? p.categoria : catDe(nome), comprado: false, preco: null, total: null });
         salvar(); render();
         if (typeof showToast === 'function') showToast('✅ Adicionado: ' + nome, 'success');
       } else {
