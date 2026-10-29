@@ -3373,15 +3373,18 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   }
 
   async function iniciarScan() {
-    if (!window.Html5Qrcode) { if (scanStatus) scanStatus.textContent = 'Biblioteca não carregou. Verifique a conexão.'; return; }
+    if (!window.Html5Qrcode) { if (scanStatus) scanStatus.textContent = 'Biblioteca não carregou. Verifique a internet.'; return; }
     if (modalScan) { modalScan.style.display = 'flex'; modalScan.classList.add('visible'); }
     if (scanStatus) scanStatus.textContent = 'Iniciando câmera...';
+    // limpar instância anterior
+    if (html5QrCode) { try { await html5QrCode.stop(); } catch (_) {} try { html5QrCode.clear(); } catch (_) {} html5QrCode = null; }
+    await new Promise(r => setTimeout(r, 300));
     try {
       html5QrCode = new Html5Qrcode('scan-reader');
       scanAtivo = true;
       await html5QrCode.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 240, height: 120 } },
+        { fps: 10, qrbox: { width: 260, height: 160 }, aspectRatio: 1.777778 },
         async (decodedText) => {
           if (!scanAtivo) return;
           scanAtivo = false;
