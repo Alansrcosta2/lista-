@@ -1259,6 +1259,27 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     'ovo caipira': { pente: 0.82, duzia: 0.7, un: 0.5 }
   };
 
+  // Padrões de embalagem comuns (supermercado BR) — sugestão inicial de quantidade
+  const packageDefaults = {
+    'arroz': { qtd: 5, unidade: 'kg' },
+    'feijao': { qtd: 1, unidade: 'kg' },
+    'acucar': { qtd: 1, unidade: 'kg' },
+    'farinha': { qtd: 1, unidade: 'kg' },
+    'macarrao': { qtd: 500, unidade: 'g' },
+    'oleo': { qtd: 900, unidade: 'ml' },
+    'cafe': { qtd: 500, unidade: 'g' },
+    'sal': { qtd: 1, unidade: 'kg' },
+    'leite condensado': { qtd: 395, unidade: 'g' },
+    'detergente': { qtd: 500, unidade: 'ml' },
+  };
+  function packageDefaultFor(nome) {
+    const n = String(nome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    for (const key in packageDefaults) {
+      if (n.includes(key)) return packageDefaults[key];
+    }
+    return null;
+  }
+
   const smartHistoryKey = 'smartHistory_v1';
   const smartProfileKey = 'smartProfile_v1';
   let smartProfile = JSON.parse(localStorage.getItem(smartProfileKey) || 'null') || { local: 'supermercado' };
@@ -1476,6 +1497,13 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         for (const q in cont) { if (cont[q] > bestC) { bestC = cont[q]; bestQ = q; } }
         if (bestQ != null && els.quantidade && (els.quantidade.value === '1' || els.quantidade.value === '')) {
           els.quantidade.value = bestQ;
+        }
+      } else {
+        // fallback: padrão de embalagem comum
+        const pd = packageDefaultFor(termo);
+        if (pd && els.quantidade && (els.quantidade.value === '1' || els.quantidade.value === '')) {
+          els.quantidade.value = pd.qtd;
+          if (orderedUnits.includes(pd.unidade)) els.unidadeSel.value = pd.unidade;
         }
       }
     } catch (_) { }
