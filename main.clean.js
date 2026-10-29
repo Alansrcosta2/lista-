@@ -3145,11 +3145,27 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtodWhnY29pdnNtenR0cmFyeHBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyOTk2MDgsImV4cCI6MjEwODg3NTYwOH0.jEWCa3qElqz8v4RXr6CGgXJjiJeEQ8vS6kfJzGpK7YQ';
 
   let supabaseClient = null;
-  try {
-    if (window.supabase && typeof window.supabase.createClient === 'function') {
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-  } catch (e) { console.log('[sync] supabase init error', e); }
+  let supabaseLoading = null;
+  function carregarSupabase() {
+    if (supabaseClient) return Promise.resolve(supabaseClient);
+    if (supabaseLoading) return supabaseLoading;
+    supabaseLoading = new Promise((resolve) => {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { console.log('[sync] init error', e); }
+        resolve(supabaseClient);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.onload = () => {
+        try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { console.log('[sync] init error', e); }
+        resolve(supabaseClient);
+      };
+      script.onerror = () => { console.log('[sync] falha ao carregar supabase'); resolve(null); };
+      document.head.appendChild(script);
+    });
+    return supabaseLoading;
+  }
 
   let syncCode = localStorage.getItem('sync_code_v1') || '';
   let syncChannel = null;
@@ -3178,7 +3194,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   };
 
   async function pullSync() {
-    if (!supabaseClient || !syncCode) return;
+    if (!syncCode) return;
+    if (!supabaseClient) { await carregarSupabase(); }
+    if (!supabaseClient) return;
     try {
       const { data, error } = await supabaseClient
         .from('lista_compras_sync')
@@ -3209,7 +3227,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   }
 
   function subscribeSync() {
-    if (!supabaseClient || !syncCode) return;
+    if (!syncCode) return;
+    if (!supabaseClient) return;
     if (syncChannel) { try { supabaseClient.removeChannel(syncChannel); } catch (_) { } syncChannel = null; }
     syncChannel = supabaseClient
       .channel('lista-sync-' + syncCode)
@@ -3259,6 +3278,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     syncConectar.addEventListener('click', async () => {
       const code = (syncCodeInput ? syncCodeInput.value : '').trim();
       if (!/^[0-9]{6}$/.test(code)) { setSyncStatus('⚠️ Código deve ter 6 dígitos.'); return; }
+      setSyncStatus('Carregando módulo de sync...');
+      const client = await carregarSupabase();
+      if (!client) { setSyncStatus('⚠️ Não foi possível carregar o sync. Verifique a internet.'); return; }
       syncCode = code;
       localStorage.setItem('sync_code_v1', syncCode);
       setSyncStatus('Conectando...');
@@ -3267,13 +3289,12 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     });
   }
 
-  // auto-reconnect if code saved
-  if (syncCode && supabaseClient) {
-    pullSync().then(() => subscribeSync());
-  }
-  if (!supabaseClient) {
-    setSyncStatus('⚠️ Supabase não carregou. Verifique a conexão.');
-    if (syncBtn) syncBtn.style.display = 'none';
+  // auto-reconnect if code saved (lazy)
+  if (syncCode) {
+    carregarSupabase().then((client) => {
+      if (client) { pullSync().then(() => subscribeSync()); }
+      else { setSyncStatus('⚠️ Sync indisponível (sem internet).'); }
+    });
   }
 
 
@@ -3309,164 +3330,4 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   })();
 
 
-  function inferUnitFromQty(qty) {
-    const q = String(qty || '').toLowerCase();
-    if (/kg|kilo/.test(q)) return 'kg';
-    if (/l|litro/.test(q)) return 'litro';
-    if (/pacote|pct/.test(q)) return 'pacote';
-    if (/duzia|dúzia/.test(q)) return 'duzia';
-    if (/pente/.test(q)) return 'pente';
-    return 'un';
-  }
-
-  // ===== SCANNER DE CÓDIGO DE BARRAS (grátis, local) =====
-  const scanBtn = document.getElementById('scan-btn');
-  const modalScan = document.getElementById('modal-scan');
-  const fecharScan = document.getElementById('fechar-scan');
-  const scanStatus = document.getElementById('scan-status');
-  let html5QrCode = null;
-  let scanAtivo = false;
-
-  const barcodeCacheKey = 'barcodeMap_v1';
-  function loadBarcodeCache() { try { return JSON.parse(localStorage.getItem(barcodeCacheKey) || '{}'); } catch (_) { return {}; } }
-  function saveBarcodeCache(c) { try { localStorage.setItem(barcodeCacheKey, JSON.stringify(c)); } catch (_) { } }
-
-  async function buscarOpenFoodFacts(ean) {
-    const cache = loadBarcodeCache();
-    if (cache[ean]) return cache[ean];
-    try {
-      const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(ean) + '.json');
-      if (!r.ok) return null;
-      const j = await r.json();
-      if (j && j.status === 1 && j.product) {
-        const p = j.product;
-        const nome = p.product_name_pt || p.product_name || p.generic_name_pt || p.generic_name || '';
-        const marca = p.brands ? String(p.brands).split(',')[0].trim() : '';
-        const full = [marca, nome].filter(Boolean).join(' ') || nome || marca;
-        const qty = p.quantity || '';
-        const img = p.image_small_url || p.image_front_small_url || p.image_url || '';
-        const result = { nome: full || ('Produto ' + ean), qty, img };
-        cache[ean] = result;
-        saveBarcodeCache(cache);
-        return result;
-      }
-    } catch (_) { }
-    return null;
-  }
-
-  function pararScan() {
-    scanAtivo = false;
-    if (html5QrCode) {
-      html5QrCode.stop().then(() => { try { html5QrCode.clear(); } catch (_) {} }).catch(() => {});
-    }
-    if (modalScan) { modalScan.classList.remove('visible'); modalScan.style.display = 'none'; }
-  }
-
-  async function iniciarScan() {
-    if (!window.Html5Qrcode) { if (scanStatus) scanStatus.textContent = 'Biblioteca não carregou. Verifique a internet.'; return; }
-    if (modalScan) { modalScan.style.display = 'flex'; modalScan.classList.add('visible'); }
-    if (scanStatus) scanStatus.textContent = 'Iniciando câmera...';
-    // limpar instância anterior
-    if (html5QrCode) { try { await html5QrCode.stop(); } catch (_) {} try { html5QrCode.clear(); } catch (_) {} html5QrCode = null; }
-    await new Promise(r => setTimeout(r, 300));
-    try {
-      html5QrCode = new Html5Qrcode('scan-reader');
-      scanAtivo = true;
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 280, height: 150 }, aspectRatio: 1.777778, formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E, Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39 ] },
-        async (decodedText) => {
-          if (!scanAtivo) return;
-          // cooldown para evitar capturas duplicadas rápidas
-          scanAtivo = false;
-          if (scanStatus) scanStatus.textContent = 'Código: ' + decodedText + ' — buscando...';
-          const info = await buscarOpenFoodFacts(decodedText);
-          const nome = info ? info.nome : ('Produto ' + decodedText);
-          const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
-          const img = info ? (info.img || '') : '';
-          const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
-          if (!existe) {
-            lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
-            if (!existeNaBase(nome)) {
-              const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-              if (!existsLocal) {
-                const lp = { nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) };
-                if (img) lp.img = img;
-                localProducts.push(lp);
-              } else if (img) {
-                const lp = localProducts.find(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-                if (lp && !lp.img) lp.img = img;
-              }
-            }
-            salvar(); render();
-            if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome + (info ? '' : ' (nome não encontrado — edite com ✏️)'), info ? 'success' : 'warning');
-          } else {
-            if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
-          }
-          if (scanStatus) scanStatus.textContent = (info ? '✅ ' + nome : '⚠️ Código ' + decodedText + ' — nome não encontrado. Toque ✏️ para editar.') + ' — aponte para o próximo.';
-          // reativar captura após cooldown (câmera continua ligada)
-          setTimeout(() => { scanAtivo = true; }, 1800);
-        },
-        () => { /* ignore scan errors */ }
-      );
-      if (scanStatus) scanStatus.textContent = 'Aponte para o código de barras...';
-    } catch (e) {
-      console.log('[scan] erro', e && e.message);
-      if (scanStatus) scanStatus.textContent = 'Erro na câmera: ' + (e && e.message ? e.message : 'desconhecido');
-    }
-  }
-
-  if (scanBtn && modalScan) {
-    scanBtn.addEventListener('click', () => { iniciarScan(); });
-  }
-  if (fecharScan) {
-    fecharScan.addEventListener('click', pararScan);
-  }
-  if (modalScan) {
-    modalScan.addEventListener('click', (e) => { if (e.target === modalScan) pararScan(); });
-  }
-  const scanManual = document.getElementById('scan-manual');
-  const scanManualBtn = document.getElementById('scan-manual-btn');
-  async function processarCodigoManual(ean) {
-    ean = String(ean || '').trim();
-    if (!ean) return;
-    if (scanStatus) scanStatus.textContent = 'Código: ' + ean + ' — buscando...';
-    const info = await buscarOpenFoodFacts(ean);
-    const nome = info ? info.nome : ('Produto ' + ean);
-    const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
-    const img = info ? (info.img || '') : '';
-    const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
-    if (!existe) {
-      lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
-      if (!existeNaBase(nome)) {
-        const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-        if (!existsLocal) {
-          const lp = { nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) };
-          if (img) lp.img = img;
-          localProducts.push(lp);
-        } else if (img) {
-          const lp = localProducts.find(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-          if (lp && !lp.img) lp.img = img;
-        }
-      }
-      salvar(); render();
-      if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome + (info ? '' : ' (edite o nome com ✏️)'), info ? 'success' : 'warning');
-    } else {
-      if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
-    }
-    if (scanStatus) scanStatus.textContent = (info ? '✅ ' + nome : '⚠️ Código ' + ean + ' — nome não encontrado. Toque ✏️ para editar.');
-    if (scanManual) scanManual.value = '';
-  }
-  if (scanManualBtn) {
-    scanManualBtn.addEventListener('click', () => processarCodigoManual(scanManual ? scanManual.value : ''));
-  }
-  if (scanManual) {
-    scanManual.addEventListener('keydown', (e) => { if (e.key === 'Enter') processarCodigoManual(scanManual.value); });
-  }
-  // inferUnitFromQty may not exist; define fallback
-  if (typeof window.inferUnitFromQty !== 'function' && typeof inferUnitFromQty !== 'function') {
-    // define local if missing
-  }
-
 });
-

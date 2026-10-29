@@ -7,7 +7,6 @@ PWA completo para planejar, comprar e controlar gastos no mercado. Funciona **10
 - **HTML5 / CSS3 / JavaScript** – estrutura, estilos, lógica
 - **localStorage** – dados ficam no dispositivo
 - **Supabase** (plano grátis) – sincronização em tempo real entre celulares
-- **html5-qrcode** (grátis) – scanner de código de barras
 - **Web Speech API** (grátis) – adicionar itens por voz
 - **Capacitor** – build Android (opcional)
 
@@ -22,7 +21,6 @@ PWA completo para planejar, comprar e controlar gastos no mercado. Funciona **10
 - Rollover: itens não comprados voltam na próxima compra
 - Conferência antes de sair (avisa o que faltou)
 - Orçamento com teto de gasto + alerta
-- Scanner de código de barras (câmera ou digitação) + OpenFoodFacts
 - Adicionar por voz (Chrome)
 - Sincronização em tempo real (código de 6 dígitos)
 - Backup automático a cada 7 dias + exportar/importar
