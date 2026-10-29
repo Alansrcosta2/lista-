@@ -124,14 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
     shareClose: document.getElementById('fechar-share'),
     shareOptionList: document.getElementById('share-option-list'),
     shareOptionBought: document.getElementById('share-option-bought'),
-    corredor: el('corredor'),
-    corredorNav: el('corredor-nav'),
-    corredorButtons: el('corredor-buttons'),
-    corredorLabel: el('current-corredor-label'),
   };
 
-  let currentAisleFilter = null;
-  window.currentAisleFilter = currentAisleFilter;
 
   // Diagnóstico mínimo
   const diag = () => {
@@ -1823,7 +1817,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   function render() {
     // Expondo para o scanner IA
     window.render = render;
-    window.currentAisleFilter = currentAisleFilter;
     window.lista = lista;
     let dados = lista.slice();
     if (!modoMercadoAtivo) {
@@ -1867,7 +1860,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       const A = scoreOf(a), B = scoreOf(b);
       if (A.pending !== B.pending) return B.pending - A.pending; // pendências primeiro
       if (A.isKg !== B.isKg) return B.isKg - A.isKg; // depois itens kg
-      if (A.aisleScore !== B.aisleScore) return B.aisleScore - A.aisleScore; // corredor preferencial
+      if (A.aisleScore !== B.aisleScore) return B.aisleScore - A.aisleScore; // seção preferencial
       if (A.freq !== B.freq) return B.freq - A.freq; // depois mais frequentes
       if (A.last !== B.last) return B.last - A.last; // depois mais recentes
       return A.name.localeCompare(B.name);
@@ -1885,33 +1878,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       }
     }
 
-    // Navegador de Corredores (Pedido do Usuário)
-    if (els.corredorNav) {
-      els.corredorNav.style.display = modoMercadoAtivo ? '' : 'none';
-      if (modoMercadoAtivo) {
-        var uniqueAislesSet = new Set(dados.map(function(it) { return it.corredor; }).filter(function(c) { return c != null; }));
-        var uniqueAisles = [];
-        uniqueAislesSet.forEach(function(val) { uniqueAisles.push(val); });
-        uniqueAisles.sort(function(a, b) { return b - a; });
-        
-        // Se o filtro atual não existe mais nos dados, resetar para Todos
-        if (currentAisleFilter !== null && !uniqueAisles.includes(currentAisleFilter)) {
-          currentAisleFilter = null;
-        }
-
-        els.corredorLabel.textContent = currentAisleFilter === null ? 'Exibindo: Todos' : ('Exibindo: Corredor ' + currentAisleFilter);
-
-        var buttonsHtml = '<button class="config-btn ' + (currentAisleFilter === null ? 'active' : '') + '" data-aisle="all">Todos</button>';
-        buttonsHtml += uniqueAisles.map(a => '<button class="config-btn ' + (currentAisleFilter === a ? 'active' : '') + '" data-aisle="' + a + '">C' + a + '</button>').join('');
-        els.corredorButtons.innerHTML = buttonsHtml;
-
-        // Aplicar o filtro de corredor
-        if (window.currentAisleFilter !== null) {
-          dados = dados.filter(it => it.corredor === window.currentAisleFilter);
-        }
-      }
-    }
-
     els.tabela.innerHTML = dados.map((it, idx) => {
       const normalizeNumber = (valor) => {
         if (valor === '' || valor === null || typeof valor === 'undefined') return '-';
@@ -1924,10 +1890,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       let badge = '';
       const unidadeLower = String(it.unidade || '').toLowerCase();
       const kgPending = (unidadeLower === 'kg' && pendingSet.has(String(it.nome || '').toLowerCase()));
-      const aisle = it.corredor != null ? ('C' + it.corredor) : '';
       const chips = [];
       if (kgPending) chips.push('peso pendente');
-      if (aisle) chips.push(aisle);
       badge = chips.length ? ' ' + chips.map(c => '<span style="font-size:.75rem;color:var(--text-secondary);background:rgba(99,102,241,0.12);border:1px solid var(--border-color);padding:2px 6px;border-radius:8px;margin-left:6px;">' + c + '</span>').join('') : '';
 
       const quantidadeTxt = unidadeLower === 'kg'
@@ -1991,7 +1955,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         document.getElementById('edit-qtd').value = item.qtd != null ? item.qtd : '';
         const uniSel = document.getElementById('edit-unidade');
         if (uniSel) uniSel.value = item.unidade || 'un';
-        document.getElementById('edit-corredor').value = item.corredor != null ? item.corredor : '';
         if (modal) { modal.style.display = 'flex'; modal.classList.add('visible'); }
         const salvarBtn = document.getElementById('edit-salvar');
         const cancelarBtn = document.getElementById('edit-cancelar');
@@ -2035,8 +1998,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
           const q = parseFloat(document.getElementById('edit-qtd').value);
           if (!isNaN(q) && q > 0) item.qtd = q;
           item.unidade = document.getElementById('edit-unidade').value || item.unidade;
-          const c = parseInt(document.getElementById('edit-corredor').value);
-          item.corredor = isNaN(c) ? null : c;
           item.categoria = catDe(item.nome);
           if (item._foto) {
             const lp = (Array.isArray(localProducts) ? localProducts : []).find(x => String(x.nome || '').toLowerCase() === String(item.nome || '').toLowerCase());
@@ -2195,13 +2156,12 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       if (!nome || isNaN(qtd) || qtd <= 0) { showError('Informe nome e quantidade válida.'); return; }
       
       const uni = els.unidadeSel ? els.unidadeSel.value : 'un';
-      const corr = els.corredor ? parseInt(els.corredor.value) || null : null;
       
       const itemObj = {
         nome,
         qtd,
         unidade: uni,
-        corredor: corr,
+        corredor: null,
         categoria: catDe(nome),
         comprado: false,
         preco: null,
@@ -2220,7 +2180,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       lista.push(itemObj);
       if (els.nome) els.nome.value = '';
       if (els.quantidade) els.quantidade.value = '1';
-      if (els.corredor) els.corredor.value = '';
       populateUnidadeOptions('');
       salvarSmartUnit();
       salvar(); render();
@@ -2278,24 +2237,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       // auto-colapsa ao entrar no Mercado
       listaColapsada = true;
       if (els.quickFilters) els.quickFilters.style.display = 'flex';
-      window.currentAisleFilter = null; // reseta filtro ao entrar
       render(); atualizarInfoMercado();
       console.log('[mercado] ativado');
-    });
-  }
-
-  // Listener para os botões de corredor (Navegador)
-  if (els.corredorButtons) {
-    els.corredorButtons.addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      const aisle = btn.dataset.aisle;
-      if (aisle === 'all') {
-        window.currentAisleFilter = null;
-      } else {
-        window.currentAisleFilter = parseInt(aisle);
-      }
-      render();
     });
   }
 

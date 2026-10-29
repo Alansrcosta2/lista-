@@ -198,7 +198,6 @@
                     <option value="un">un</option>
                     <option value="kg">kg</option>
                 </select>
-                <input type="number" id="corredor" placeholder="Corredor" min="1" aria-label="Número do corredor">
                 <small id="unidade-hint" class="field-hint" style="display:none;"></small>
                 <button id="adicionar" class="verde">Adicionar Produto</button>
                 <button id="voz-btn" class="roxo" title="Adicionar por voz">🎤 Voz</button>
@@ -253,21 +252,6 @@
             <button id="qf-pending" class="config-btn">Pendências</button>
         </div>
 
-        <!-- Navegador de Corredores (Pedido do Usuário) -->
-        <div id="corredor-nav" style="display:none; margin-top:12px; padding: 10px; background: rgba(99,102,241,0.05); border-radius: 12px; border: 1px dashed var(--primary-color);">
-            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--primary-color); display: flex; justify-content: space-between;">
-                <span>Navegador de Corredores</span>
-                <span id="current-corredor-label">Exibindo: Todos</span>
-            </div>
-            <div id="corredor-buttons" style="display:flex; gap:6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
-                <!-- Botões gerados dinamicamente -->
-            </div>
-        </div>
-
-        <div style="margin:8px 0;">
-            <input type="text" id="lista-busca" placeholder="🔍 Buscar na lista..." aria-label="Buscar na lista"
-                style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);">
-        </div>
         <div id="lista-wrapper" class="table-wrapper">
             <table id="lista">
                 <thead>
@@ -442,7 +426,6 @@
                 <label>Nome <input type="text" id="edit-nome" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
                 <label>Quantidade <input type="number" id="edit-qtd" step="0.001" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
                 <label>Unidade <select id="edit-unidade" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"><option value="un">un</option><option value="kg">kg</option><option value="pacote">pacote</option><option value="litro">litro</option><option value="duzia">dúzia</option><option value="pente">pente</option></select></label>
-                <label>Corredor <input type="number" id="edit-corredor" min="1" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <button type="button" id="edit-foto" class="config-btn">📷 Tirar foto</button>
                     <input type="file" id="edit-foto-input" accept="image/*" capture="environment" style="display:none;">
