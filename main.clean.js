@@ -1465,6 +1465,21 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       .join('');
     els.unidadeSel.value = selecionada;
 
+    // Sugestão de quantidade pelo histórico (ex: você sempre compra 5kg de arroz)
+    try {
+      const nNorm = smartUnit._normalize(termo);
+      const recentes = (smartUnit.historico || []).filter(r => smartUnit._normalize(r.nome) === nNorm);
+      if (recentes.length) {
+        const cont = {};
+        recentes.forEach(r => { const q = r.quantidade; if (q != null) cont[q] = (cont[q] || 0) + 1; });
+        let bestQ = null, bestC = 0;
+        for (const q in cont) { if (cont[q] > bestC) { bestC = cont[q]; bestQ = q; } }
+        if (bestQ != null && els.quantidade && (els.quantidade.value === '1' || els.quantidade.value === '')) {
+          els.quantidade.value = bestQ;
+        }
+      }
+    } catch (_) { }
+
     const hintEl = document.getElementById('unidade-hint');
     if (hintEl) {
       if (!termo) {
