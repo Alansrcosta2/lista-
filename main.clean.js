@@ -1262,7 +1262,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   // Padrões de embalagem comuns (supermercado BR) — sugestão inicial de quantidade
   const packageDefaults = {
     'arroz': { qtd: 5, unidade: 'kg' },
-    'feijao': { qtd: 1, unidade: 'kg' },
     'acucar': { qtd: 1, unidade: 'kg' },
     'farinha': { qtd: 1, unidade: 'kg' },
     'macarrao': { qtd: 500, unidade: 'g' },
@@ -1271,10 +1270,13 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     'sal': { qtd: 1, unidade: 'kg' },
     'leite condensado': { qtd: 395, unidade: 'g' },
     'detergente': { qtd: 500, unidade: 'ml' },
+    'leite': { qtd: 1, unidade: 'litro' },
+    'ovo': { qtd: 1, unidade: 'duzia' },
   };
   function packageDefaultFor(nome) {
     const n = String(nome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    for (const key in packageDefaults) {
+    const keys = Object.keys(packageDefaults).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
       if (n.includes(key)) return packageDefaults[key];
     }
     return null;
