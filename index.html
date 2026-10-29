@@ -153,6 +153,9 @@
         <header>
             <h1>🛒 Lista +</h1>
             <div class="header-icons">
+                <button id="install-btn" title="Instalar app" aria-label="Instalar app" class="icon-btn" style="display:none;">
+                    <span style="font-size: 1.3rem;">📲</span>
+                </button>
                 <button id="theme-toggle" title="Alternar Tema" aria-label="Alternar Tema" class="icon-btn theme-btn">
                     <img src="menu-icons/lua-crescente.png" alt="Alternar para tema claro" class="theme-icon"
                         loading="lazy" />
@@ -197,7 +200,6 @@
                 <small id="unidade-hint" class="field-hint" style="display:none;"></small>
                 <button id="adicionar" class="verde">Adicionar Produto</button>
                 <button id="modo-mercado" class="amarelo">Ir para Mercado</button>
-                <button id="btn-acabou" class="roxo">🏠 Acabou em casa</button>
             </div>
             <div id="sugestoes-container" class="sugestoes-box" style="display:none; margin-top:10px;"></div>
         </div>
@@ -416,17 +418,6 @@
     </div>
 
 
-
-    <!-- Modal Acabou em Casa -->
-    <div id="modal-acabou" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <button class="modal-close" id="fechar-acabou" aria-label="Fechar">&times;</button>
-            <h2>🏠 Acabou em casa</h2>
-            <p style="color:var(--text-secondary); margin:6px 0;">Toque no item que acabou para adicioná-lo à lista de compras.</p>
-            <input type="text" id="acabou-busca" placeholder="Buscar produto..." style="width:100%; padding:8px; margin:8px 0; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);">
-            <div id="acabou-lista" class="modal-body" style="max-height:50vh; overflow:auto;"></div>
-        </div>
-    </div>
 
     <!-- Modal Conferência -->
     <div id="modal-conferencia" class="modal-overlay" style="display:none;">

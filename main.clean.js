@@ -2863,13 +2863,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
 
   // ===== FASE 3: INTELIGÊNCIA REAL =====
 
-  // --- Modo "Acabou em casa": modal com catálogo, toque adiciona à lista ---
-  const btnAcabou = document.getElementById('btn-acabou');
-  const modalAcabou = document.getElementById('modal-acabou');
-  const fecharAcabou = document.getElementById('fechar-acabou');
-  const acabouBusca = document.getElementById('acabou-busca');
-  const acabouLista = document.getElementById('acabou-lista');
-
   function getAllCatalog() {
     const arr = [];
     try {
@@ -2881,51 +2874,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       });
     } catch (_) {}
     return arr;
-  }
-
-  function renderAcabou(filter) {
-    if (!acabouLista) return;
-    const q = String(filter || '').toLowerCase().trim();
-    const cats = getAllCatalog().filter(p => !q || String(p.nome || '').toLowerCase().includes(q));
-    if (!cats.length) { acabouLista.innerHTML = '<em>Nenhum produto encontrado.</em>'; return; }
-    acabouLista.innerHTML = cats.map(p => {
-      const jaNaLista = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(p.nome || '').toLowerCase() && !x.comprado);
-      return '<div class="acabou-item" data-nome="' + encodeURIComponent(p.nome) + '" data-uni="' + (p.unidade || 'un') + '" data-cat="' + (p.categoria || '') + '" data-emoji="' + (p.emoji || '') + '">' +
-        '<span class="nome">' + (p.emoji ? p.emoji + ' ' : '') + p.nome + '</span>' +
-        (jaNaLista ? '<span class="add" style="opacity:0.5;">já na lista</span>' : '<span class="add">+ adicionar</span>') +
-        '</div>';
-    }).join('');
-  }
-
-  function adicionarAcabou(nome, uni, cat, emoji) {
-    const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase() && !x.comprado);
-    if (existe) { if (typeof showToast === 'function') showToast('Já está na lista: ' + nome, 'info'); return; }
-    const itemObj = { nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: cat || catDe(nome), comprado: false, preco: null, total: null };
-    lista.push(itemObj);
-    if (!existeNaBase(nome)) {
-      const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase());
-      if (!existsLocal) { localProducts.push({ nome, categoria: cat || '', unidade: uni || 'un', emoji: emoji || emojiDe(nome) }); }
-    }
-    salvar(); render();
-    if (typeof showToast === 'function') showToast('✅ Adicionado: ' + nome, 'success');
-    renderAcabou(acabouBusca ? acabouBusca.value : '');
-    atualizarSugestoes();
-  }
-
-  if (btnAcabou && modalAcabou) {
-    btnAcabou.addEventListener('click', () => { modalAcabou.style.display = 'flex'; modalAcabou.classList.add('visible'); renderAcabou(''); if (acabouBusca) { acabouBusca.value = ''; acabouBusca.focus(); } });
-  }
-  if (fecharAcabou && modalAcabou) {
-    fecharAcabou.addEventListener('click', () => { modalAcabou.classList.remove('visible'); modalAcabou.style.display = 'none'; });
-    modalAcabou.addEventListener('click', (e) => { if (e.target === modalAcabou) { modalAcabou.classList.remove('visible'); modalAcabou.style.display = 'none'; } });
-  }
-  if (acabouBusca) acabouBusca.addEventListener('input', () => renderAcabou(acabouBusca.value));
-  if (acabouLista) {
-    acabouLista.addEventListener('click', (e) => {
-      const item = e.target.closest('.acabou-item');
-      if (!item) return;
-      adicionarAcabou(decodeURIComponent(item.dataset.nome || ''), item.dataset.uni, item.dataset.cat, item.dataset.emoji);
-    });
   }
 
   // --- Sugestões automáticas pelo histórico ---
@@ -2981,7 +2929,15 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       let uni = 'un';
       const p = getAllCatalog().find(x => String(x.nome).toLowerCase() === nome.toLowerCase());
       if (p && p.unidade) uni = p.unidade;
-      adicionarAcabou(nome, uni, p ? p.categoria : catDe(nome), p ? p.emoji : emojiDe(nome));
+      // adiciona à lista (evita duplicata)
+      const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase() && !x.comprado);
+      if (!existe) {
+        lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: (p && p.categoria) ? p.categoria : catDe(nome), comprado: false, preco: null, total: null });
+        salvar(); render();
+        if (typeof showToast === 'function') showToast('✅ Adicionado: ' + nome, 'success');
+      } else {
+        if (typeof showToast === 'function') showToast('Já está na lista: ' + nome, 'info');
+      }
     });
   }
 
@@ -3048,6 +3004,33 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   if (typeof window.showToast !== 'function') {
     window.showToast = function(msg) { console.log('[toast]', msg); };
   }
+
+
+  // ===== BOTÃO DE INSTALAÇÃO PWA =====
+  const installBtn = document.getElementById('install-btn');
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (installBtn) installBtn.style.display = '';
+  });
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        if (typeof showToast === 'function') showToast('✅ App instalado!', 'success');
+      }
+      deferredInstallPrompt = null;
+      installBtn.style.display = 'none';
+    });
+  }
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    if (installBtn) installBtn.style.display = 'none';
+    if (typeof showToast === 'function') showToast('✅ App instalado na tela inicial!', 'success');
+  });
 
 });
 
