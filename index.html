@@ -20,6 +20,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon.png">
     <link rel="icon" type="image/png" href="icons/icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body data-theme="dark" class="splashing">
@@ -199,7 +200,9 @@
                 <input type="number" id="corredor" placeholder="Corredor" min="1" aria-label="Número do corredor">
                 <small id="unidade-hint" class="field-hint" style="display:none;"></small>
                 <button id="adicionar" class="verde">Adicionar Produto</button>
+                <button id="voz-btn" class="roxo" title="Adicionar por voz">🎤 Voz</button>
                 <button id="modo-mercado" class="amarelo">Ir para Mercado</button>
+                <button id="sync-btn" class="roxo">🔗 Conectar casal</button>
             </div>
             <div id="sugestoes-container" class="sugestoes-box" style="display:none; margin-top:10px;"></div>
         </div>
@@ -234,6 +237,11 @@
         <div id="info-mercado" class="info-mercado" style="display: none;">
             <span id="alerta-faltando"></span>
             <span id="total-compra"></span>
+            <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+                <label for="orcamento" style="font-size:0.85rem; color:var(--text-secondary);">Orçamento (R$):</label>
+                <input type="number" id="orcamento" step="0.01" min="0" placeholder="sem limite"
+                    style="width:120px; padding:4px 8px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);">
+            </div>
         </div>
 
         <!-- Filtros rápidos no Mercado -->
@@ -254,6 +262,10 @@
             </div>
         </div>
 
+        <div style="margin:8px 0;">
+            <input type="text" id="lista-busca" placeholder="🔍 Buscar na lista..." aria-label="Buscar na lista"
+                style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);">
+        </div>
         <div id="lista-wrapper" class="table-wrapper">
             <table id="lista">
                 <thead>
@@ -418,6 +430,41 @@
     </div>
 
 
+
+    <!-- Modal Editar Item -->
+    <div id="modal-editar" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-editar" aria-label="Fechar">&times;</button>
+            <h2>✏️ Editar item</h2>
+            <div style="display:grid; gap:8px; margin-top:10px;">
+                <label>Nome <input type="text" id="edit-nome" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
+                <label>Quantidade <input type="number" id="edit-qtd" step="0.001" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
+                <label>Unidade <select id="edit-unidade" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"><option value="un">un</option><option value="kg">kg</option><option value="pacote">pacote</option><option value="litro">litro</option><option value="duzia">dúzia</option><option value="pente">pente</option></select></label>
+                <label>Corredor <input type="number" id="edit-corredor" min="1" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                <button id="edit-cancelar" class="config-btn">Cancelar</button>
+                <button id="edit-salvar" class="config-btn" style="background:var(--primary-color); color:#fff; border:none;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sincronização -->
+    <div id="modal-sync" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-sync" aria-label="Fechar">&times;</button>
+            <h2>🔗 Conectar casal</h2>
+            <p style="color:var(--text-secondary); margin:6px 0;">Vocês dois digitam o mesmo código de 6 dígitos para compartilhar a lista em tempo real.</p>
+            <div style="display:flex; gap:8px; margin:10px 0;">
+                <input type="text" id="sync-code" maxlength="6" placeholder="Código (6 dígitos)" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary); text-align:center; font-size:1.2rem; letter-spacing:4px;">
+                <button id="sync-gerar" class="config-btn">Gerar código</button>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button id="sync-conectar" class="config-btn" style="background:var(--primary-color); color:#fff; border:none;">Conectar</button>
+            </div>
+            <p id="sync-status" style="margin-top:10px; font-size:0.85rem; color:var(--text-secondary);"></p>
+        </div>
+    </div>
 
     <!-- Modal Conferência -->
     <div id="modal-conferencia" class="modal-overlay" style="display:none;">

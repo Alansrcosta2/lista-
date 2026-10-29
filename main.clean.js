@@ -231,6 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== UI STATE =====
   let listaColapsada = false;
   let quickFilter = 'all'; // all | kg | pending
+  let listFilter = '';
+  let budget = parseFloat(localStorage.getItem('budget_v1') || '0') || 0;
   let compradosExpanded = false;
 
   // ===== THEME =====
@@ -1118,6 +1120,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     localStorage.setItem('avgWeightPerPiece_v1', JSON.stringify(avgWeightPerPiece));
     localStorage.setItem('aisles_v1', JSON.stringify(aisles));
     localStorage.setItem('barcodeMap_v1', JSON.stringify(barcodeMap));
+    if (window.pushSync) { try { window.pushSync(); } catch (_) { } }
   };
 
   /**
@@ -1501,6 +1504,22 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   // inicializa opções
   populateUnidadeOptions(els.nome ? els.nome.value : '');
   if (els.nome) els.nome.addEventListener('input', () => populateUnidadeOptions(els.nome.value));
+  const listaBusca = document.getElementById('lista-busca');
+  if (listaBusca) {
+    listaBusca.addEventListener('input', () => { listFilter = listaBusca.value.trim().toLowerCase(); render(); });
+  }
+
+  const orcamentoInput = document.getElementById('orcamento');
+  if (orcamentoInput) {
+    if (budget > 0) orcamentoInput.value = budget;
+    orcamentoInput.addEventListener('change', () => {
+      const v = parseFloat(orcamentoInput.value);
+      budget = isNaN(v) || v <= 0 ? 0 : v;
+      if (budget > 0) localStorage.setItem('budget_v1', String(budget)); else localStorage.removeItem('budget_v1');
+      atualizarInfoMercado();
+    });
+  }
+
   const getAllProducts = function() { return (window.produtos || []).concat(Array.isArray(localProducts) ? localProducts : []); };
   const normalizeText = function(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
   const normalize = normalizeText;
@@ -1810,6 +1829,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     if (!modoMercadoAtivo) {
       dados = dados.filter(it => !it.comprado);
     }
+    if (listFilter) {
+      dados = dados.filter(it => String(it.nome || '').toLowerCase().includes(listFilter));
+    }
 
     const pendingSet = new Set((Array.isArray(boughtItems) ? boughtItems : [])
       .filter(x => (x.unidade || '').toLowerCase() === 'kg' && x.peso == null)
@@ -1931,6 +1953,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
           : (lastHist && typeof lastHist.price === 'number' ? lastHist.price : null));
       const precoTxt = precoBase != null ? fmt(precoBase) : '';
       const controles = '<div class="linha-controles" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">' +
+        '<button class="btn-sm" data-act="edit" data-idx="' + idx + '" style="background:transparent;border:none;padding:0;margin:0;width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1rem;" title="Editar">✏️</button>' +
         '<button class="btn-sm danger" data-act="rem" data-idx="' + idx + '" style="background:transparent;border:none;padding:0;margin:0;float:right;width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;">' +
           '<img src="' + trashUrl + '" alt="Excluir" style="width:20px;height:20px;object-fit:contain;opacity:0.9;" />' +
         '</button>' +
@@ -1955,6 +1978,38 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         const i = Number(e.currentTarget.dataset.idx);
         lista.splice(i, 1);
         salvar(); render(); atualizarInfoMercado();
+      });
+    });
+    els.tabela.querySelectorAll('.btn-sm[data-act="edit"]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const i = Number(e.currentTarget.dataset.idx);
+        const item = (Array.isArray(lista) ? lista : [])[i];
+        if (!item) return;
+        const modal = document.getElementById('modal-editar');
+        document.getElementById('edit-nome').value = item.nome || '';
+        document.getElementById('edit-qtd').value = item.qtd != null ? item.qtd : '';
+        const uniSel = document.getElementById('edit-unidade');
+        if (uniSel) uniSel.value = item.unidade || 'un';
+        document.getElementById('edit-corredor').value = item.corredor != null ? item.corredor : '';
+        if (modal) { modal.style.display = 'flex'; modal.classList.add('visible'); }
+        const salvarBtn = document.getElementById('edit-salvar');
+        const cancelarBtn = document.getElementById('edit-cancelar');
+        const fecharBtn = document.getElementById('fechar-editar');
+        const close = () => { if (modal) { modal.classList.remove('visible'); modal.style.display = 'none'; } };
+        if (cancelarBtn) cancelarBtn.onclick = close;
+        if (fecharBtn) fecharBtn.onclick = close;
+        if (salvarBtn) salvarBtn.onclick = () => {
+          item.nome = (document.getElementById('edit-nome').value || '').trim() || item.nome;
+          const q = parseFloat(document.getElementById('edit-qtd').value);
+          if (!isNaN(q) && q > 0) item.qtd = q;
+          item.unidade = document.getElementById('edit-unidade').value || item.unidade;
+          const c = parseInt(document.getElementById('edit-corredor').value);
+          item.corredor = isNaN(c) ? null : c;
+          item.categoria = catDe(item.nome);
+          salvar(); render(); atualizarInfoMercado();
+          close();
+        };
       });
     });
     els.tabela.querySelectorAll('tr.linha-item').forEach(tr => {
@@ -1994,7 +2049,22 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     if (pendenciasPeso > 0) parts.push(pendenciasPeso + ' pendência(s) de peso');
 
     if (els.alertaFaltando) els.alertaFaltando.textContent = parts.length ? parts.join(' • ') : 'Tudo comprado 🎉';
-    if (els.totalCompra) els.totalCompra.textContent = 'Total: ' + fmt(total);
+    if (els.totalCompra) {
+      let txt = 'Total: ' + fmt(total);
+      if (budget > 0) {
+        const restante = budget - total;
+        if (restante < 0) {
+          txt += '  ⚠️ Acima do orçamento em ' + fmt(Math.abs(restante));
+          els.totalCompra.style.color = '#ef4444';
+        } else {
+          txt += '  (restam ' + fmt(restante) + ')';
+          els.totalCompra.style.color = '';
+        }
+      } else {
+        els.totalCompra.style.color = '';
+      }
+      els.totalCompra.textContent = txt;
+    }
     if (els.compradosPending) {
       els.compradosPending.style.display = pendenciasPeso > 0 ? '' : 'none';
       els.compradosPending.textContent = String(pendenciasPeso);
@@ -2119,6 +2189,46 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       salvar(); render();
       try { /* showToast(`✅ Adicionado: ${nome}`); */ } catch (_) { }
     });
+  }
+
+  // ===== ADICIONAR POR VOZ =====
+  const vozBtn = document.getElementById('voz-btn');
+  if (vozBtn) {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      vozBtn.style.display = 'none';
+    } else {
+      vozBtn.addEventListener('click', () => {
+        const rec = new SpeechRec();
+        rec.lang = 'pt-BR';
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+        vozBtn.textContent = '🎙️ Ouvindo...';
+        vozBtn.disabled = true;
+        rec.onresult = (ev) => {
+          const texto = (ev.results && ev.results[0] && ev.results[0][0]) ? ev.results[0][0].transcript : '';
+          const itens = String(texto).split(/,| e |;/).map(x => x.trim()).filter(Boolean);
+          let adicionados = 0;
+          itens.forEach(nome => {
+            const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
+            if (!existe) {
+              lista.push({ nome, qtd: 1, unidade: 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+              if (!existeNaBase(nome)) {
+                const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+                if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: 'un', emoji: emojiDe(nome) });
+              }
+              adicionados++;
+            }
+          });
+          if (adicionados > 0) { salvar(); render(); if (typeof showToast === 'function') showToast('🎤 Adicionados: ' + itens.join(', '), 'success'); }
+          else if (itens.length) { if (typeof showToast === 'function') showToast('Já estavam na lista.', 'info'); }
+          else { if (typeof showToast === 'function') showToast('Não entendi. Tente de novo.', 'warning'); }
+        };
+        rec.onerror = () => { if (typeof showToast === 'function') showToast('Erro no microfone.', 'error'); };
+        rec.onend = () => { vozBtn.textContent = '🎤 Voz'; vozBtn.disabled = false; };
+        try { rec.start(); } catch (e) { vozBtn.textContent = '🎤 Voz'; vozBtn.disabled = false; }
+      });
+    }
   }
 
   if (els.modoMercado) {
@@ -3006,10 +3116,21 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     }, true);
   }
 
-  // showToast helper (caso não exista)
-  if (typeof window.showToast !== 'function') {
-    window.showToast = function(msg) { console.log('[toast]', msg); };
-  }
+  // ===== TOAST VISUAL =====
+  (function initToast() {
+    let container = document.getElementById('toast-container');
+    if (!container) { container = document.createElement('div'); container.id = 'toast-container'; document.body.appendChild(container); }
+    window.showToast = function(msg, type) {
+      type = type || 'info';
+      console.log('[toast]', msg);
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.textContent = String(msg || '');
+      container.appendChild(t);
+      requestAnimationFrame(() => t.classList.add('show'));
+      setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 250); }, 2600);
+    };
+  })();
 
 
   // ===== BOTÃO DE INSTALAÇÃO PWA =====
@@ -3037,6 +3158,143 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     if (installBtn) installBtn.style.display = 'none';
     if (typeof showToast === 'function') showToast('✅ App instalado na tela inicial!', 'success');
   });
+
+
+  // ===== SINCRONIZAÇÃO EM TEMPO REAL (Supabase) =====
+  const SUPABASE_URL = 'https://khuhgcoivsmzttrarxpb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtodWhnY29pdnNtenR0cmFyeHBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyOTk2MDgsImV4cCI6MjEwODg3NTYwOH0.jEWCa3qElqz8v4RXr6CGgXJjiJeEQ8vS6kfJzGpK7YQ';
+
+  let supabaseClient = null;
+  try {
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+  } catch (e) { console.log('[sync] supabase init error', e); }
+
+  let syncCode = localStorage.getItem('sync_code_v1') || '';
+  let syncChannel = null;
+  let syncPushTimer = null;
+  let syncReceiving = false;
+
+  function setSyncStatus(msg) {
+    const el = document.getElementById('sync-status');
+    if (el) el.textContent = msg;
+  }
+
+  async function pushSyncNow() {
+    if (!supabaseClient || !syncCode || syncReceiving) return;
+    try {
+      const { error } = await supabaseClient
+        .from('lista_compras_sync')
+        .upsert({ code: syncCode, lista: lista, updated_at: new Date().toISOString() }, { onConflict: 'code' });
+      if (error) console.log('[sync] push error', error.message);
+    } catch (e) { console.log('[sync] push exception', e && e.message); }
+  }
+
+  window.pushSync = function() {
+    if (!syncCode) return;
+    clearTimeout(syncPushTimer);
+    syncPushTimer = setTimeout(pushSyncNow, 800);
+  };
+
+  async function pullSync() {
+    if (!supabaseClient || !syncCode) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('lista_compras_sync')
+        .select('lista')
+        .eq('code', syncCode)
+        .maybeSingle();
+      if (error) { console.log('[sync] pull error', error.message); return; }
+      if (data && Array.isArray(data.lista)) {
+        syncReceiving = true;
+        lista = data.lista;
+        window.lista = lista;
+        salvarLocalSemPush();
+        render(); atualizarInfoMercado();
+        syncReceiving = false;
+        setSyncStatus('✅ Sincronizado (' + lista.length + ' itens)');
+      } else {
+        // no remote yet -> push current
+        pushSyncNow();
+        setSyncStatus('✅ Conectado. Lista local enviada.');
+      }
+    } catch (e) { console.log('[sync] pull exception', e && e.message); syncReceiving = false; }
+  }
+
+  function salvarLocalSemPush() {
+    try {
+      localStorage.setItem('shoppingList_v3', JSON.stringify(lista));
+    } catch (_) { }
+  }
+
+  function subscribeSync() {
+    if (!supabaseClient || !syncCode) return;
+    if (syncChannel) { try { supabaseClient.removeChannel(syncChannel); } catch (_) { } syncChannel = null; }
+    syncChannel = supabaseClient
+      .channel('lista-sync-' + syncCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lista_compras_sync', filter: 'code=eq.' + syncCode }, (payload) => {
+        const novo = payload && payload.new && payload.new.lista;
+        if (Array.isArray(novo)) {
+          syncReceiving = true;
+          lista = novo;
+          window.lista = lista;
+          salvarLocalSemPush();
+          render(); atualizarInfoMercado();
+          syncReceiving = false;
+          setSyncStatus('🔄 Atualizado pela outra pessoa');
+        }
+      })
+      .subscribe();
+  }
+
+  // UI
+  const syncBtn = document.getElementById('sync-btn');
+  const modalSync = document.getElementById('modal-sync');
+  const fecharSync = document.getElementById('fechar-sync');
+  const syncCodeInput = document.getElementById('sync-code');
+  const syncGerar = document.getElementById('sync-gerar');
+  const syncConectar = document.getElementById('sync-conectar');
+
+  function gerarCodigo() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
+  if (syncBtn && modalSync) {
+    syncBtn.addEventListener('click', () => {
+      modalSync.style.display = 'flex';
+      modalSync.classList.add('visible');
+      if (syncCodeInput) syncCodeInput.value = syncCode || '';
+      setSyncStatus(syncCode ? ('Conectado ao código ' + syncCode) : 'Digite um código ou gere um novo.');
+    });
+  }
+  if (fecharSync && modalSync) {
+    fecharSync.addEventListener('click', () => { modalSync.classList.remove('visible'); modalSync.style.display = 'none'; });
+    modalSync.addEventListener('click', (e) => { if (e.target === modalSync) { modalSync.classList.remove('visible'); modalSync.style.display = 'none'; } });
+  }
+  if (syncGerar && syncCodeInput) {
+    syncGerar.addEventListener('click', () => { syncCodeInput.value = gerarCodigo(); });
+  }
+  if (syncConectar) {
+    syncConectar.addEventListener('click', async () => {
+      const code = (syncCodeInput ? syncCodeInput.value : '').trim();
+      if (!/^[0-9]{6}$/.test(code)) { setSyncStatus('⚠️ Código deve ter 6 dígitos.'); return; }
+      syncCode = code;
+      localStorage.setItem('sync_code_v1', syncCode);
+      setSyncStatus('Conectando...');
+      await pullSync();
+      subscribeSync();
+    });
+  }
+
+  // auto-reconnect if code saved
+  if (syncCode && supabaseClient) {
+    pullSync().then(() => subscribeSync());
+  }
+  if (!supabaseClient) {
+    setSyncStatus('⚠️ Supabase não carregou. Verifique a conexão.');
+    if (syncBtn) syncBtn.style.display = 'none';
+  }
 
 });
 
