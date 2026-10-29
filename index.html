@@ -443,6 +443,11 @@
                 <label>Quantidade <input type="number" id="edit-qtd" step="0.001" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
                 <label>Unidade <select id="edit-unidade" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"><option value="un">un</option><option value="kg">kg</option><option value="pacote">pacote</option><option value="litro">litro</option><option value="duzia">dúzia</option><option value="pente">pente</option></select></label>
                 <label>Corredor <input type="number" id="edit-corredor" min="1" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary);"></label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button type="button" id="edit-foto" class="config-btn">📷 Tirar foto</button>
+                    <input type="file" id="edit-foto-input" accept="image/*" capture="environment" style="display:none;">
+                    <img id="edit-foto-preview" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); display:none;">
+                </div>
             </div>
             <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
                 <button id="edit-cancelar" class="config-btn">Cancelar</button>

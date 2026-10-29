@@ -1999,6 +1999,37 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         const close = () => { if (modal) { modal.classList.remove('visible'); modal.style.display = 'none'; } };
         if (cancelarBtn) cancelarBtn.onclick = close;
         if (fecharBtn) fecharBtn.onclick = close;
+        // foto
+        const fotoBtn = document.getElementById('edit-foto');
+        const fotoInput = document.getElementById('edit-foto-input');
+        const fotoPreview = document.getElementById('edit-foto-preview');
+        if (fotoPreview) { fotoPreview.style.display = 'none'; fotoPreview.src = ''; }
+        if (fotoBtn && fotoInput) {
+          fotoBtn.onclick = () => fotoInput.click();
+          fotoInput.onchange = () => {
+            const file = fotoInput.files && fotoInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const max = 120;
+                const scale = Math.min(max / img.width, max / img.height, 1);
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                if (fotoPreview) { fotoPreview.src = dataUrl; fotoPreview.style.display = ''; }
+                // store on item temporarily
+                item._foto = dataUrl;
+              };
+              img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+          };
+        }
         if (salvarBtn) salvarBtn.onclick = () => {
           item.nome = (document.getElementById('edit-nome').value || '').trim() || item.nome;
           const q = parseFloat(document.getElementById('edit-qtd').value);
@@ -2007,6 +2038,12 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
           const c = parseInt(document.getElementById('edit-corredor').value);
           item.corredor = isNaN(c) ? null : c;
           item.categoria = catDe(item.nome);
+          if (item._foto) {
+            const lp = (Array.isArray(localProducts) ? localProducts : []).find(x => String(x.nome || '').toLowerCase() === String(item.nome || '').toLowerCase());
+            if (lp) lp.img = item._foto;
+            else localProducts.push({ nome: item.nome, categoria: item.categoria || '', unidade: item.unidade || 'un', emoji: emojiDe(item.nome), img: item._foto });
+            delete item._foto;
+          }
           salvar(); render(); atualizarInfoMercado();
           close();
         };
