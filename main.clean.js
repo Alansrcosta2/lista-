@@ -3347,18 +3347,28 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   let html5QrCode = null;
   let scanAtivo = false;
 
+  const barcodeCacheKey = 'barcodeMap_v1';
+  function loadBarcodeCache() { try { return JSON.parse(localStorage.getItem(barcodeCacheKey) || '{}'); } catch (_) { return {}; } }
+  function saveBarcodeCache(c) { try { localStorage.setItem(barcodeCacheKey, JSON.stringify(c)); } catch (_) { } }
+
   async function buscarOpenFoodFacts(ean) {
+    const cache = loadBarcodeCache();
+    if (cache[ean]) return cache[ean];
     try {
       const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(ean) + '.json');
       if (!r.ok) return null;
       const j = await r.json();
       if (j && j.status === 1 && j.product) {
         const p = j.product;
-        const nome = p.product_name_pt || p.product_name || '';
+        const nome = p.product_name_pt || p.product_name || p.generic_name_pt || p.generic_name || '';
         const marca = p.brands ? String(p.brands).split(',')[0].trim() : '';
         const full = [marca, nome].filter(Boolean).join(' ') || nome || marca;
         const qty = p.quantity || '';
-        return { nome: full || ('Produto ' + ean), qty };
+        const img = p.image_small_url || p.image_front_small_url || p.image_url || '';
+        const result = { nome: full || ('Produto ' + ean), qty, img };
+        cache[ean] = result;
+        saveBarcodeCache(cache);
+        return result;
       }
     } catch (_) { }
     return null;
@@ -3393,19 +3403,27 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
           const info = await buscarOpenFoodFacts(decodedText);
           const nome = info ? info.nome : ('Produto ' + decodedText);
           const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
+          const img = info ? (info.img || '') : '';
           const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
           if (!existe) {
             lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
             if (!existeNaBase(nome)) {
               const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-              if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) });
+              if (!existsLocal) {
+                const lp = { nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) };
+                if (img) lp.img = img;
+                localProducts.push(lp);
+              } else if (img) {
+                const lp = localProducts.find(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+                if (lp && !lp.img) lp.img = img;
+              }
             }
             salvar(); render();
-            if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome, 'success');
+            if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome + (info ? '' : ' (nome não encontrado — edite com ✏️)'), info ? 'success' : 'warning');
           } else {
             if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
           }
-          if (scanStatus) scanStatus.textContent = '✅ ' + nome + ' — aponte para o próximo.';
+          if (scanStatus) scanStatus.textContent = (info ? '✅ ' + nome : '⚠️ Código ' + decodedText + ' — nome não encontrado. Toque ✏️ para editar.') + ' — aponte para o próximo.';
           // reativar captura após cooldown (câmera continua ligada)
           setTimeout(() => { scanAtivo = true; }, 1800);
         },
@@ -3436,19 +3454,27 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     const info = await buscarOpenFoodFacts(ean);
     const nome = info ? info.nome : ('Produto ' + ean);
     const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
+    const img = info ? (info.img || '') : '';
     const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
     if (!existe) {
       lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
       if (!existeNaBase(nome)) {
         const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-        if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) });
+        if (!existsLocal) {
+          const lp = { nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) };
+          if (img) lp.img = img;
+          localProducts.push(lp);
+        } else if (img) {
+          const lp = localProducts.find(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+          if (lp && !lp.img) lp.img = img;
+        }
       }
       salvar(); render();
-      if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome, 'success');
+      if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome + (info ? '' : ' (edite o nome com ✏️)'), info ? 'success' : 'warning');
     } else {
       if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
     }
-    if (scanStatus) scanStatus.textContent = '✅ ' + nome;
+    if (scanStatus) scanStatus.textContent = (info ? '✅ ' + nome : '⚠️ Código ' + ean + ' — nome não encontrado. Toque ✏️ para editar.');
     if (scanManual) scanManual.value = '';
   }
   if (scanManualBtn) {
