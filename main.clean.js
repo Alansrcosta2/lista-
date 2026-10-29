@@ -2155,6 +2155,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   if (els.voltarPlan) {
     els.voltarPlan.addEventListener('click', () => {
       modoMercadoAtivo = false; selecionado = null;
+      // rollover: itens comprados saem da lista ativa (já salvos em boughtItems); não comprados ficam
+      lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
+      window.lista = lista;
       els.formPlan.style.display = '';
       els.formMercado.style.display = 'none';
       document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = 'none');
@@ -2163,8 +2166,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       if (els.listaWrapper) els.listaWrapper.style.display = '';
       if (els.quickFilters) els.quickFilters.style.display = 'none';
       quickFilter = 'all';
-      render(); atualizarInfoMercado();
-      console.log('[mercado] desativado');
+      salvar(); render(); atualizarInfoMercado();
+      console.log('[mercado] desativado (rollover aplicado)');
     });
   }
 
@@ -2988,6 +2991,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       const sair = await mostrarConferencia();
       if (sair) {
         modoMercadoAtivo = false; selecionado = null;
+        // rollover: itens comprados saem da lista ativa
+        lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
+        window.lista = lista;
         if (els.formPlan) els.formPlan.style.display = '';
         if (els.formMercado) els.formMercado.style.display = 'none';
         document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = 'none');
@@ -2995,7 +3001,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         if (els.listaWrapper) els.listaWrapper.style.display = '';
         if (els.quickFilters) els.quickFilters.style.display = 'none';
         quickFilter = 'all';
-        render(); atualizarInfoMercado();
+        salvar(); render(); atualizarInfoMercado();
       }
     }, true);
   }
