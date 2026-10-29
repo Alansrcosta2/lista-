@@ -3328,5 +3328,108 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     }
   })();
 
+
+  function inferUnitFromQty(qty) {
+    const q = String(qty || '').toLowerCase();
+    if (/kg|kilo/.test(q)) return 'kg';
+    if (/l|litro/.test(q)) return 'litro';
+    if (/pacote|pct/.test(q)) return 'pacote';
+    if (/duzia|dúzia/.test(q)) return 'duzia';
+    if (/pente/.test(q)) return 'pente';
+    return 'un';
+  }
+
+  // ===== SCANNER DE CÓDIGO DE BARRAS (grátis, local) =====
+  const scanBtn = document.getElementById('scan-btn');
+  const modalScan = document.getElementById('modal-scan');
+  const fecharScan = document.getElementById('fechar-scan');
+  const scanStatus = document.getElementById('scan-status');
+  let html5QrCode = null;
+  let scanAtivo = false;
+
+  async function buscarOpenFoodFacts(ean) {
+    try {
+      const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(ean) + '.json');
+      if (!r.ok) return null;
+      const j = await r.json();
+      if (j && j.status === 1 && j.product) {
+        const p = j.product;
+        const nome = p.product_name_pt || p.product_name || '';
+        const marca = p.brands ? String(p.brands).split(',')[0].trim() : '';
+        const full = [marca, nome].filter(Boolean).join(' ') || nome || marca;
+        const qty = p.quantity || '';
+        return { nome: full || ('Produto ' + ean), qty };
+      }
+    } catch (_) { }
+    return null;
+  }
+
+  function pararScan() {
+    scanAtivo = false;
+    if (html5QrCode) {
+      html5QrCode.stop().then(() => { try { html5QrCode.clear(); } catch (_) {} }).catch(() => {});
+    }
+    if (modalScan) { modalScan.classList.remove('visible'); modalScan.style.display = 'none'; }
+  }
+
+  async function iniciarScan() {
+    if (!window.Html5Qrcode) { if (scanStatus) scanStatus.textContent = 'Biblioteca não carregou. Verifique a conexão.'; return; }
+    if (modalScan) { modalScan.style.display = 'flex'; modalScan.classList.add('visible'); }
+    if (scanStatus) scanStatus.textContent = 'Iniciando câmera...';
+    try {
+      html5QrCode = new Html5Qrcode('scan-reader');
+      scanAtivo = true;
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 240, height: 120 } },
+        async (decodedText) => {
+          if (!scanAtivo) return;
+          scanAtivo = false;
+          if (scanStatus) scanStatus.textContent = 'Código: ' + decodedText + ' — buscando...';
+          await html5QrCode.stop().catch(() => {});
+          try { html5QrCode.clear(); } catch (_) {}
+          // process
+          const info = await buscarOpenFoodFacts(decodedText);
+          const nome = info ? info.nome : ('Produto ' + decodedText);
+          const uni = info && info.qty && typeof inferUnitFromQty === 'function' ? inferUnitFromQty(info.qty) : 'un';
+          const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
+          if (!existe) {
+            lista.push({ nome, qtd: 1, unidade: uni || 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+            if (!existeNaBase(nome)) {
+              const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+              if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: uni || 'un', emoji: emojiDe(nome) });
+            }
+            salvar(); render();
+            if (typeof showToast === 'function') showToast('📷 Adicionado: ' + nome, 'success');
+          } else {
+            if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
+          }
+          if (scanStatus) scanStatus.textContent = 'Adicionado! Escaneie outro ou feche.';
+          // restart
+          setTimeout(() => { if (modalScan && modalScan.style.display !== 'none') iniciarScan(); }, 1200);
+        },
+        () => { /* ignore scan errors */ }
+      );
+      if (scanStatus) scanStatus.textContent = 'Aponte para o código de barras...';
+    } catch (e) {
+      console.log('[scan] erro', e && e.message);
+      if (scanStatus) scanStatus.textContent = 'Erro na câmera: ' + (e && e.message ? e.message : 'desconhecido');
+    }
+  }
+
+  if (scanBtn && modalScan) {
+    scanBtn.addEventListener('click', () => { iniciarScan(); });
+  }
+  if (fecharScan) {
+    fecharScan.addEventListener('click', pararScan);
+  }
+  if (modalScan) {
+    modalScan.addEventListener('click', (e) => { if (e.target === modalScan) pararScan(); });
+  }
+  // inferUnitFromQty may not exist; define fallback
+  if (typeof window.inferUnitFromQty !== 'function' && typeof inferUnitFromQty !== 'function') {
+    // define local if missing
+  }
+
 });
 

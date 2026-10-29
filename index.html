@@ -21,6 +21,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon.png">
     <link rel="icon" type="image/png" href="icons/icon.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 
 <body data-theme="dark" class="splashing">
@@ -201,6 +202,7 @@
                 <small id="unidade-hint" class="field-hint" style="display:none;"></small>
                 <button id="adicionar" class="verde">Adicionar Produto</button>
                 <button id="voz-btn" class="roxo" title="Adicionar por voz">🎤 Voz</button>
+                <button id="scan-btn" class="roxo" title="Escanear código de barras">📷 Scanner</button>
                 <button id="modo-mercado" class="amarelo">Ir para Mercado</button>
                 <button id="sync-btn" class="roxo">🔗 Conectar casal</button>
             </div>
@@ -463,6 +465,17 @@
                 <button id="sync-conectar" class="config-btn" style="background:var(--primary-color); color:#fff; border:none;">Conectar</button>
             </div>
             <p id="sync-status" style="margin-top:10px; font-size:0.85rem; color:var(--text-secondary);"></p>
+        </div>
+    </div>
+
+    <!-- Modal Scanner -->
+    <div id="modal-scan" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:420px;">
+            <button class="modal-close" id="fechar-scan" aria-label="Fechar">&times;</button>
+            <h2>📷 Escanear código de barras</h2>
+            <p style="color:var(--text-secondary); font-size:0.85rem; margin:6px 0;">Aponte a câmera para o código de barras do produto.</p>
+            <div id="scan-reader" style="width:100%; min-height:240px; border-radius:10px; overflow:hidden; background:#000;"></div>
+            <p id="scan-status" style="margin-top:8px; font-size:0.85rem; color:var(--text-secondary);"></p>
         </div>
     </div>
 
