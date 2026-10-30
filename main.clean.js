@@ -650,7 +650,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const sugestoes = candidatos.sort((a, b) => {
       const pa = pendingSet.has(String(a.nome || '').toLowerCase());
       const pb = pendingSet.has(String(b.nome || '').toLowerCase());
-      if (pa && !pb) return -1; if (!pa && pb) return 1; return 0;
+      if (pa && !pb) return -1; if (!pa && pb) return 1;
+      const na = normalize(a.nome), nb = normalize(b.nome);
+      const ra = na.startsWith(q) ? 0 : 1;
+      const rb = nb.startsWith(q) ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      return na.localeCompare(nb);
     }).slice(0, 8);
     if (sugestoes.length === 0) { els.autocompleteMercadoList.style.display = 'none'; return; }
     sugestoes.forEach((p, idx) => {
@@ -1827,6 +1832,13 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       .filter(p => {
         const n = normalize(p.nome);
         return n.includes(q) || (alias && n.includes(alias));
+      })
+      .sort((a, b) => {
+        const na = normalize(a.nome), nb = normalize(b.nome);
+        const pa = na.startsWith(q) ? 0 : (alias && na.startsWith(alias) ? 1 : 2);
+        const pb = nb.startsWith(q) ? 0 : (alias && nb.startsWith(alias) ? 1 : 2);
+        if (pa !== pb) return pa - pb;
+        return na.localeCompare(nb);
       })
       .slice(0, 8);
     if (sugestoes.length === 0) { els.autocompleteList.style.display = 'none'; return; }
