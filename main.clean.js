@@ -1266,28 +1266,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     'ovo caipira': { pente: 0.82, duzia: 0.7, un: 0.5 }
   };
 
-  // Padrões de embalagem comuns (supermercado BR) — sugestão inicial de quantidade
-  const packageDefaults = {
-    'arroz': { qtd: 5, unidade: 'kg' },
-    'acucar': { qtd: 1, unidade: 'kg' },
-    'farinha': { qtd: 1, unidade: 'kg' },
-    'macarrao': { qtd: 1, unidade: 'pacote' },
-    'oleo': { qtd: 1, unidade: 'litro' },
-    'cafe': { qtd: 1, unidade: 'pacote' },
-    'sal': { qtd: 1, unidade: 'kg' },
-    'leite condensado': { qtd: 1, unidade: 'un' },
-    'detergente': { qtd: 1, unidade: 'un' },
-    'leite': { qtd: 1, unidade: 'litro' },
-  };
-  function packageDefaultFor(nome) {
-    const n = String(nome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    const keys = Object.keys(packageDefaults).sort((a, b) => b.length - a.length);
-    for (const key of keys) {
-      if (n.includes(key)) return packageDefaults[key];
-    }
-    return null;
-  }
-
   const smartHistoryKey = 'smartHistory_v1';
   const smartProfileKey = 'smartProfile_v1';
   let smartProfile = JSON.parse(localStorage.getItem(smartProfileKey) || 'null') || { local: 'supermercado' };
