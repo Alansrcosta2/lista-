@@ -670,6 +670,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ===== TOOLBAR (ações visíveis) =====
+  const tbSalvar = document.getElementById('tb-salvar');
+  const tbAbrir = document.getElementById('tb-abrir');
+  const tbApagar = document.getElementById('tb-apagar');
+  if (tbSalvar) tbSalvar.addEventListener('click', () => els.salvarLista && els.salvarLista.click());
+  if (tbAbrir) tbAbrir.addEventListener('click', () => els.abrirListas && els.abrirListas.click());
+  if (tbApagar) tbApagar.addEventListener('click', () => els.apagarLista && els.apagarLista.click());
+
   const openConfig = () => {
     if (!els.modalConfig) { console.log('[config] modal-config não encontrado'); alert('Configurações indisponível no momento.'); return; }
     els.modalConfig.style.display = 'flex';

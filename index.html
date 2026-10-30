@@ -178,9 +178,6 @@
             <button class="header-menu-close" aria-label="Fechar menu">&times;</button>
             <button data-action="config">Configurações</button>
             <button data-action="ajuda">Ajuda</button>
-            <button data-action="apagar">Apagar Lista</button>
-            <button data-action="salvar">Salvar Lista</button>
-            <button data-action="abrir">Abrir Lista Salva</button>
             <button data-action="exportar">Exportar Dados</button>
             <button data-action="importar">Importar Dados</button>
             <button data-action="repetir">🔁 Repetir última compra</button>
@@ -205,6 +202,11 @@
                 <button id="sync-btn" class="roxo">🔗 Conectar casal</button>
             </div>
             <div id="sugestoes-container" class="sugestoes-box" style="display:none; margin-top:10px;"></div>
+            <div id="toolbar" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                <button id="tb-salvar" class="config-btn">💾 Salvar Lista</button>
+                <button id="tb-abrir" class="config-btn">📂 Abrir Lista</button>
+                <button id="tb-apagar" class="config-btn">🗑️ Apagar Lista</button>
+            </div>
         </div>
 
         <div id="form-mercado" style="display: none;">
