@@ -2244,7 +2244,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       
       lista.push(itemObj);
       if (els.nome) els.nome.value = '';
-      if (els.quantidade) els.quantidade.value = '1';
+      if (els.quantidade) els.quantidade.value = '';
       populateUnidadeOptions('');
       salvarSmartUnit();
       salvar(); render();
