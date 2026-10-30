@@ -2540,6 +2540,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       if (!confirm('Apagar toda a lista?')) return;
       lista = [];
       boughtItems = [];
+      priceHistory = {};
       salvar(); render(); atualizarInfoMercado();
     });
   }
