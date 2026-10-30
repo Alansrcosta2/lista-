@@ -279,8 +279,8 @@ header h1 {
     flex-direction: column;
     gap: 4px;
     padding: 14px;
-    background: rgba(15, 23, 42, 0.92);
-    border: 1px solid rgba(99, 102, 241, 0.35);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
     border-radius: 18px;
     box-shadow: 0 22px 45px rgba(8, 15, 31, 0.45);
     backdrop-filter: blur(18px);
@@ -320,7 +320,7 @@ header h1 {
     position: absolute;
     inset: 1px;
     border-radius: inherit;
-    background: rgba(5, 11, 24, 0.9);
+    background: var(--bg-surface);
     z-index: -1;
 }
 
