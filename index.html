@@ -203,6 +203,7 @@
             </div>
             <div id="sugestoes-container" class="sugestoes-box" style="display:none; margin-top:10px;"></div>
             <div id="toolbar" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                <button id="tb-comprados" class="config-btn">📋 Comprados</button>
                 <button id="tb-despensa" class="config-btn">📦 Despensa</button>
                 <button id="tb-salvar" class="config-btn">💾 Salvar Lista</button>
                 <button id="tb-abrir" class="config-btn">📂 Abrir Lista</button>
@@ -228,12 +229,12 @@
                 <input type="number" id="packsize-mercado" placeholder="Itens por pack/pente" step="1" min="1"
                     aria-label="Tamanho do pack ou pente" style="display:none;">
                 <div id="indicador-preco" class="indicador-preco" style="grid-column: 1 / -1; display:none;"></div>
-                <button id="adicionar-comprado" class="verde">Marcar como Comprado</button>
-                
-                <button id="marcar-peso-depois" class="amarelo"
-                    title="Para itens por kg, marca comprado sem peso e finaliza depois" style="display:none;">Finalizar
-                    peso depois</button>
-                <button id="voltar-planejamento" class="roxo">Voltar para Planejamento</button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; grid-column: 1 / -1;">
+                    <button id="adicionar-comprado" class="verde" style="flex:1; min-width:160px;">Marcar como Comprado</button>
+                    <button id="marcar-peso-depois" class="amarelo" style="display:none; flex:1; min-width:160px;"
+                        title="Para itens por kg, marca comprado sem peso e finaliza depois">Finalizar peso depois</button>
+                    <button id="voltar-planejamento" class="roxo" style="flex:1; min-width:160px;">Voltar para Planejamento</button>
+                </div>
             </div>
         </div>
 

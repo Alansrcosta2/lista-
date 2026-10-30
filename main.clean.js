@@ -672,6 +672,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== TOOLBAR (ações visíveis) =====
+  const tbComprados = document.getElementById('tb-comprados');
+  if (tbComprados) tbComprados.addEventListener('click', () => {
+    const sec = document.getElementById('comprados-section');
+    const wrap = document.getElementById('comprados-wrapper');
+    const toggle = document.getElementById('comprados-toggle');
+    if (sec) sec.style.display = '';
+    if (wrap) wrap.style.display = '';
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    try { renderComprados(); } catch (_) { }
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
   const tbSalvar = document.getElementById('tb-salvar');
   const tbAbrir = document.getElementById('tb-abrir');
   const tbApagar = document.getElementById('tb-apagar');
