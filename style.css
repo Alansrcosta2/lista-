@@ -1232,13 +1232,11 @@ body::-webkit-scrollbar-thumb:hover {
 
 @media (max-width: 480px) {
     .container {
-        width: 100%;
-        margin: 0 0 24px 0;
-        padding: 16px 12px calc(72px + env(safe-area-inset-bottom, 0px));
-        gap: 12px;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
+        width: calc(100% - 24px);
+        margin: 12px auto 24px;
+        padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px));
+        gap: 16px;
+        border-radius: 20px;
     }
 
     header {
