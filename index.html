@@ -183,6 +183,9 @@
             <button data-action="abrir">Abrir Lista Salva</button>
             <button data-action="exportar">Exportar Dados</button>
             <button data-action="importar">Importar Dados</button>
+            <button data-action="repetir">🔁 Repetir última compra</button>
+            <button data-action="esquecidos">❓ Itens esquecidos</button>
+            <button data-action="rapido">⚡ Modo rápido</button>
         </div>
 
         <div id="form-planejamento">
@@ -452,6 +455,30 @@
                 <button id="sync-conectar" class="config-btn" style="background:var(--primary-color); color:#fff; border:none;">Conectar</button>
             </div>
             <p id="sync-status" style="margin-top:10px; font-size:0.85rem; color:var(--text-secondary);"></p>
+        </div>
+    </div>
+
+    <!-- Modal Itens Esquecidos -->
+    <div id="modal-esquecidos" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-esquecidos" aria-label="Fechar">&times;</button>
+            <h2>❓ Itens esquecidos</h2>
+            <p style="color:var(--text-secondary); font-size:0.85rem; margin:6px 0;">Itens da sua última compra que não estão na lista atual:</p>
+            <div id="esquecidos-lista" class="modal-body" style="max-height:50vh; overflow:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Modo Rápido -->
+    <div id="modal-rapido" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="fechar-rapido" aria-label="Fechar">&times;</button>
+            <h2>⚡ Modo rápido</h2>
+            <p style="color:var(--text-secondary); font-size:0.85rem; margin:6px 0;">Digite um item por linha:</p>
+            <textarea id="rapido-texto" rows="8" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-primary); font-family:inherit;"></textarea>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                <button id="rapido-cancelar" class="config-btn">Cancelar</button>
+                <button id="rapido-adicionar" class="config-btn" style="background:var(--primary-color); color:#fff; border:none;">Adicionar todos</button>
+            </div>
         </div>
     </div>
 

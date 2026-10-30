@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let lista = JSON.parse(localStorage.getItem('shoppingList_v3') || '[]');
   window.lista = lista;
   let listasSalvas = JSON.parse(localStorage.getItem('savedLists_v3') || '{}');
+  let ultimaCompra = JSON.parse(localStorage.getItem('ultimaCompra_v1') || '[]');
   let savedPurchases = JSON.parse(localStorage.getItem('savedPurchases_v1') || '{}');
   let selecionado = null;
   let editingBoughtIndex = null;
@@ -403,6 +404,52 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (act === 'importar') {
         const importBtn = document.getElementById('importar-dados');
         if (importBtn) importBtn.click();
+      } else if (act === 'repetir') {
+        if (!Array.isArray(ultimaCompra) || !ultimaCompra.length) { if (typeof showToast === 'function') showToast('Nenhuma compra anterior salva.', 'info'); return; }
+        let add = 0;
+        ultimaCompra.forEach(it => {
+          const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(it.nome || '').toLowerCase() && !x.comprado);
+          if (!existe) {
+            lista.push({ nome: it.nome, qtd: it.qtd || 1, unidade: it.unidade || 'un', corredor: null, categoria: it.categoria || catDe(it.nome), comprado: false, preco: it.preco || null, total: null });
+            add++;
+          }
+        });
+        salvar(); render(); atualizarInfoMercado();
+        if (typeof showToast === 'function') showToast('🔁 ' + add + ' itens da última compra adicionados.', 'success');
+      } else if (act === 'esquecidos') {
+        const modal = document.getElementById('modal-esquecidos');
+        const cont = document.getElementById('esquecidos-lista');
+        if (!modal || !cont) return;
+        const nomesAtuais = new Set((Array.isArray(lista) ? lista : []).filter(x => !x.comprado).map(x => String(x.nome || '').toLowerCase()));
+        const faltando = (Array.isArray(ultimaCompra) ? ultimaCompra : []).filter(it => !nomesAtuais.has(String(it.nome || '').toLowerCase()));
+        if (!faltando.length) {
+          cont.innerHTML = '<em>Nenhum item esquecido — sua lista já cobre a última compra.</em>';
+        } else {
+          cont.innerHTML = faltando.map(it =>
+            '<div class="sugestao-item"><span>' + (emojiDe(it.nome) || '') + ' ' + it.nome + '</span><button data-nome="' + encodeURIComponent(it.nome) + '" data-qtd="' + (it.qtd || 1) + '" data-uni="' + (it.unidade || 'un') + '">+ lista</button></div>'
+          ).join('');
+          cont.onclick = (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const nome = decodeURIComponent(btn.dataset.nome || '');
+            const qtd = parseFloat(btn.dataset.qtd) || 1;
+            const uni = btn.dataset.uni || 'un';
+            const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
+            if (!existe) {
+              lista.push({ nome, qtd, unidade: uni, corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+              salvar(); render(); atualizarInfoMercado();
+              if (typeof showToast === 'function') showToast('✅ Adicionado: ' + nome, 'success');
+            }
+            // refresh
+            btn.parentElement.remove();
+          };
+        }
+        modal.style.display = 'flex'; modal.classList.add('visible');
+      } else if (act === 'rapido') {
+        const modal = document.getElementById('modal-rapido');
+        if (modal) { modal.style.display = 'flex'; modal.classList.add('visible'); }
+        const txt = document.getElementById('rapido-texto');
+        if (txt) txt.value = '';
       } else if (act === 'salvar-comprados') {
         const nome = prompt('Nome dos comprados:'); if (!nome) return;
         savedPurchases[nome] = Array.isArray(boughtItems) ? boughtItems.slice() : [];
@@ -584,6 +631,42 @@ document.addEventListener('DOMContentLoaded', () => {
           salvar(); renderLocalBase();
         }
       }
+    });
+  }
+
+  // ===== MODAIS NOVOS (esquecidos / rapido) =====
+  const fecharEsquecidos = document.getElementById('fechar-esquecidos');
+  const modalEsquecidos = document.getElementById('modal-esquecidos');
+  if (fecharEsquecidos && modalEsquecidos) {
+    fecharEsquecidos.addEventListener('click', () => { modalEsquecidos.classList.remove('visible'); modalEsquecidos.style.display = 'none'; });
+    modalEsquecidos.addEventListener('click', (e) => { if (e.target === modalEsquecidos) { modalEsquecidos.classList.remove('visible'); modalEsquecidos.style.display = 'none'; } });
+  }
+  const fecharRapido = document.getElementById('fechar-rapido');
+  const modalRapido = document.getElementById('modal-rapido');
+  const rapidoCancelar = document.getElementById('rapido-cancelar');
+  const rapidoAdicionar = document.getElementById('rapido-adicionar');
+  if (fecharRapido && modalRapido) {
+    fecharRapido.addEventListener('click', () => { modalRapido.classList.remove('visible'); modalRapido.style.display = 'none'; });
+    modalRapido.addEventListener('click', (e) => { if (e.target === modalRapido) { modalRapido.classList.remove('visible'); modalRapido.style.display = 'none'; } });
+  }
+  if (rapidoCancelar && modalRapido) {
+    rapidoCancelar.addEventListener('click', () => { modalRapido.classList.remove('visible'); modalRapido.style.display = 'none'; });
+  }
+  if (rapidoAdicionar) {
+    rapidoAdicionar.addEventListener('click', () => {
+      const txt = document.getElementById('rapido-texto');
+      const linhas = (txt ? txt.value : '').split('\n').map(x => x.trim()).filter(Boolean);
+      let add = 0;
+      linhas.forEach(nome => {
+        const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
+        if (!existe) {
+          lista.push({ nome, qtd: 1, unidade: 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+          add++;
+        }
+      });
+      if (add > 0) { salvar(); render(); atualizarInfoMercado(); if (typeof showToast === 'function') showToast('⚡ ' + add + ' itens adicionados.', 'success'); }
+      else if (linhas.length) { if (typeof showToast === 'function') showToast('Já estavam na lista.', 'info'); }
+      if (modalRapido) { modalRapido.classList.remove('visible'); modalRapido.style.display = 'none'; }
     });
   }
 
@@ -1846,6 +1929,10 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     els.voltarPlan.addEventListener('click', () => {
       modoMercadoAtivo = false; selecionado = null;
       // rollover: itens comprados saem da lista ativa (já salvos em boughtItems); não comprados ficam
+      if (Array.isArray(boughtItems) && boughtItems.length) {
+        ultimaCompra = boughtItems.slice();
+        try { localStorage.setItem('ultimaCompra_v1', JSON.stringify(ultimaCompra)); } catch (_) { }
+      }
       lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
       window.lista = lista;
       els.formPlan.style.display = '';
@@ -2684,6 +2771,10 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       if (sair) {
         modoMercadoAtivo = false; selecionado = null;
         // rollover: itens comprados saem da lista ativa
+        if (Array.isArray(boughtItems) && boughtItems.length) {
+          ultimaCompra = boughtItems.slice();
+          try { localStorage.setItem('ultimaCompra_v1', JSON.stringify(ultimaCompra)); } catch (_) { }
+        }
         lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
         window.lista = lista;
         if (els.formPlan) els.formPlan.style.display = '';
