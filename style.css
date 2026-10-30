@@ -1580,3 +1580,15 @@ body::-webkit-scrollbar-thumb:hover {
 .toast.warning { background: linear-gradient(135deg,#f59e0b,#d97706); }
 .toast.error { background: linear-gradient(135deg,#ef4444,#dc2626); }
 .toast.info { background: linear-gradient(135deg,#6366f1,#4f46e5); }
+
+/* ===== Melhorias modernas (iOS-like) ===== */
+button:active { transform: scale(0.97); }
+.config-btn:active, .verde:active, .amarelo:active, .roxo:active, .vermelho:active { transform: scale(0.97); }
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--input-border-focus, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+.modal-content { border-radius: 20px; }
+.modal-overlay { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.container { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
