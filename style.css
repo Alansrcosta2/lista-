@@ -1326,11 +1326,11 @@ body::-webkit-scrollbar-thumb:hover {
     }
 
     #toolbar {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        display: flex;
+        flex-wrap: wrap;
         gap: 8px;
     }
-    #toolbar .config-btn { width: 100%; }
+    #toolbar .config-btn { flex: 1 1 180px; }
 }
 
 @media (min-width: 1200px) {
@@ -1425,11 +1425,11 @@ body::-webkit-scrollbar-thumb:hover {
     }
 
     #toolbar {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        display: flex;
+        flex-wrap: wrap;
         gap: 8px;
     }
-    #toolbar .config-btn { width: 100%; }
+    #toolbar .config-btn { flex: 1 1 180px; }
 }
 
 @media (min-width: 1200px) {
