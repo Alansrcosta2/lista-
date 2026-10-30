@@ -17,6 +17,7 @@ html, body {
 
 /* ===== VARIÁVEIS ===== */
 :root {
+    --primary-color: #6366f1;
     --app-height: 100vh;
     --font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     --border-radius-lg: 24px;
@@ -30,6 +31,7 @@ html, body {
 }
 
 [data-theme="dark"] {
+    --primary-color: #818cf8;
     --bg-main: #050b18;
     --bg-surface: #0f172a;
     --bg-elevated: #132037;
@@ -65,6 +67,7 @@ html, body {
 }
 
 [data-theme="light"] {
+    --primary-color: #4f46e5;
     --bg-main: #f3f4f6;
     --bg-surface: #ffffff;
     --bg-elevated: #f9fafb;
