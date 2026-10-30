@@ -1466,64 +1466,14 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   };
   const populateUnidadeOptions = (nome) => {
     if (!els.unidadeSel) return;
-    const termo = (nome || '').trim();
-    const reconhecimento = reconhecerProduto(termo);
-    const sugestao = suggestUnits(termo);
-
-    const orderedUnits = [];
-    const addUnit = (valor) => {
-      const norm = normalizeUnitName(valor);
-      if (!norm) return;
-      if (!orderedUnits.includes(norm)) orderedUnits.push(norm);
-    };
-
-    if (reconhecimento) {
-      addUnit(reconhecimento.unit);
-      (reconhecimento.alternatives || []).forEach(addUnit);
-    }
-    (sugestao.units || []).forEach(addUnit);
-    baseUnits.forEach(addUnit);
-
-    const preferida = reconhecimento ? normalizeUnitName(reconhecimento.unit) : sugestao.def;
-    const selecionada = orderedUnits.includes(preferida) ? preferida : (orderedUnits[0] || baseUnits[0]);
-
-    els.unidadeSel.innerHTML = orderedUnits
+    els.unidadeSel.innerHTML = baseUnits
       .map((u) => '<option value="' + u + '">' + (unitLabels[u] || u) + '</option>')
       .join('');
-    els.unidadeSel.value = selecionada;
-
-    // Quantidade: deixa vazio para o usuário digitar (não sugere mais)
-
+    els.unidadeSel.value = 'un';
     const hintEl = document.getElementById('unidade-hint');
-    if (hintEl) {
-      if (!termo) {
-        hintEl.style.display = 'none';
-        hintEl.innerHTML = '';
-      } else {
-        const badges = [];
-        if (reconhecimento) {
-          badges.push('<span class="smart-badge">🧠 ' + reconhecimento.label + '</span>');
-        } else if (sugestao && sugestao.confianca) {
-          badges.push('<span class="smart-badge">🧠 Histórico</span>');
-        }
-        const textos = [];
-        if (reconhecimento && reconhecimento.hint) textos.push(reconhecimento.hint);
-        if (sugestao && sugestao.hint && sugestao.hint !== (reconhecimento && reconhecimento.hint)) textos.push(sugestao.hint);
-        if (!reconhecimento && textos.length === 0 && sugestao && sugestao.confianca) {
-          textos.push('Confiança baseada no seu histórico: ' + Math.round(sugestao.confianca * 100) + '%.');
-        }
-        const textoHtml = textos.length ? ('<span class="smart-text">' + textos.join(' • ') + '</span>') : '';
-        const conteudo = badges.concat([textoHtml]).filter(Boolean).join(' ');
-        if (conteudo) {
-          hintEl.innerHTML = conteudo;
-          hintEl.style.display = 'flex';
-        } else {
-          hintEl.style.display = 'none';
-          hintEl.innerHTML = '';
-        }
-      }
-    }
+    if (hintEl) { hintEl.style.display = 'none'; hintEl.innerHTML = ''; }
   };
+
   // inicializa opções
   populateUnidadeOptions(els.nome ? els.nome.value : '');
   if (els.nome) els.nome.addEventListener('input', () => populateUnidadeOptions(els.nome.value));
