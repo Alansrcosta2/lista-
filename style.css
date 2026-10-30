@@ -1310,8 +1310,31 @@ body::-webkit-scrollbar-thumb:hover {
     }
 
     .container {
+        width: min(92%, 820px);
         border-radius: 28px;
-        padding: 32px 32px 120px;
+        padding: 32px 40px 120px;
+    }
+
+    .form-grid-planejamento,
+    .form-grid-mercado {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .form-grid-planejamento .autocomplete-container,
+    .form-grid-mercado .autocomplete-container {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        width: min(90%, 960px);
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        width: min(90%, 960px);
     }
 }
 /* ===== TOOLTIPS (Problema #7) ===== */
@@ -1379,8 +1402,31 @@ body::-webkit-scrollbar-thumb:hover {
     }
 
     .container {
+        width: min(92%, 820px);
         border-radius: 28px;
-        padding: 32px 32px 120px;
+        padding: 32px 40px 120px;
+    }
+
+    .form-grid-planejamento,
+    .form-grid-mercado {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .form-grid-planejamento .autocomplete-container,
+    .form-grid-mercado .autocomplete-container {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        width: min(90%, 960px);
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        width: min(90%, 960px);
     }
 }
 
