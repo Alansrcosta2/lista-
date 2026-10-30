@@ -1190,7 +1190,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     shareViaWhatsApp({ title: 'Lista + - Compras', text: message });
   };
   // ===== SMART UNIT AI =====
-  const baseUnits = ['un', 'kg', 'pacote', 'litro', 'caixa', 'duzia', 'pente', 'garrafa', 'bandeja'];
+  const baseUnits = ['un', 'kg', 'pacote', 'duzia', 'pente', 'garrafa', 'bandeja'];
   const SMART_BASE = {
     // Carnes & proteínas
     'carne': { kg: 0.92, pacote: 0.5 },
@@ -1264,12 +1264,12 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     'arroz': { qtd: 5, unidade: 'kg' },
     'acucar': { qtd: 1, unidade: 'kg' },
     'farinha': { qtd: 1, unidade: 'kg' },
-    'macarrao': { qtd: 500, unidade: 'g' },
-    'oleo': { qtd: 900, unidade: 'ml' },
-    'cafe': { qtd: 500, unidade: 'g' },
+    'macarrao': { qtd: 1, unidade: 'pacote' },
+    'oleo': { qtd: 1, unidade: 'litro' },
+    'cafe': { qtd: 1, unidade: 'pacote' },
     'sal': { qtd: 1, unidade: 'kg' },
-    'leite condensado': { qtd: 395, unidade: 'g' },
-    'detergente': { qtd: 500, unidade: 'ml' },
+    'leite condensado': { qtd: 1, unidade: 'un' },
+    'detergente': { qtd: 1, unidade: 'un' },
     'leite': { qtd: 1, unidade: 'litro' },
   };
   function packageDefaultFor(nome) {
