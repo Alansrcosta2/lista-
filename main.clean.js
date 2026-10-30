@@ -2086,27 +2086,36 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     const faltamKg = lista.filter(i => !i.comprado && String(i.unidade || '').toLowerCase() === 'kg').length;
     const pendenciasPeso = (Array.isArray(boughtItems) ? boughtItems : []).filter(x => (x.unidade || '').toLowerCase() === 'kg' && x.peso == null).length;
     const total = boughtItems.reduce((s, i) => s + (i.total || 0), 0);
+    const listaVazia = (!Array.isArray(lista) || lista.length === 0) && (!Array.isArray(boughtItems) || boughtItems.length === 0);
     const parts = [];
     if (faltam > 0) parts.push('Faltam ' + faltam + ' item(ns)');
     if (faltamKg > 0) parts.push(faltamKg + ' por kg');
     if (pendenciasPeso > 0) parts.push(pendenciasPeso + ' pendência(s) de peso');
 
-    if (els.alertaFaltando) els.alertaFaltando.textContent = parts.length ? parts.join(' • ') : 'Tudo comprado 🎉';
+    if (els.alertaFaltando) {
+      if (listaVazia) els.alertaFaltando.textContent = 'Lista vazia';
+      else els.alertaFaltando.textContent = parts.length ? parts.join(' • ') : 'Tudo comprado 🎉';
+    }
     if (els.totalCompra) {
-      let txt = 'Total: ' + fmt(total);
-      if (budget > 0) {
-        const restante = budget - total;
-        if (restante < 0) {
-          txt += '  ⚠️ Acima do orçamento em ' + fmt(Math.abs(restante));
-          els.totalCompra.style.color = '#ef4444';
+      if (listaVazia) {
+        els.totalCompra.textContent = '';
+        els.totalCompra.style.color = '';
+      } else {
+        let txt = 'Total: ' + fmt(total);
+        if (budget > 0) {
+          const restante = budget - total;
+          if (restante < 0) {
+            txt += '  ⚠️ Acima do orçamento em ' + fmt(Math.abs(restante));
+            els.totalCompra.style.color = '#ef4444';
+          } else {
+            txt += '  (restam ' + fmt(restante) + ')';
+            els.totalCompra.style.color = '';
+          }
         } else {
-          txt += '  (restam ' + fmt(restante) + ')';
           els.totalCompra.style.color = '';
         }
-      } else {
-        els.totalCompra.style.color = '';
+        els.totalCompra.textContent = txt;
       }
-      els.totalCompra.textContent = txt;
     }
     if (els.compradosPending) {
       els.compradosPending.style.display = pendenciasPeso > 0 ? '' : 'none';
@@ -2530,6 +2539,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     els.apagarLista.addEventListener('click', () => {
       if (!confirm('Apagar toda a lista?')) return;
       lista = [];
+      boughtItems = [];
       salvar(); render(); atualizarInfoMercado();
     });
   }
