@@ -757,17 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (act === 'importar') {
         const importBtn = document.getElementById('importar-dados');
         if (importBtn) importBtn.click();
-      } else if (act === 'teste') {
-        if (Array.isArray(lista) && lista.length > 0 && !confirm('Já tem itens na lista. Adicionar lista de teste mesmo assim?')) return;
-        const teste = [
-          { nome: 'Arroz', qtd: 1, unidade: 'pacote', corredor: null, categoria: 'Mercearia', comprado: false, preco: null, total: null },
-          { nome: 'Carne', qtd: 2, unidade: 'kg', corredor: null, categoria: 'Açougue', comprado: false, preco: null, total: null },
-          { nome: 'Leite', qtd: 2, unidade: 'litro', corredor: null, categoria: 'Laticínios', comprado: false, preco: null, total: null },
-          { nome: 'Feijão', qtd: 1, unidade: 'kg', corredor: null, categoria: 'Mercearia', comprado: false, preco: null, total: null },
-        ];
-        teste.forEach(t => lista.push(t));
-        salvar(); render(); atualizarInfoMercado();
-        if (typeof showToast === 'function') showToast('🧪 Lista de teste carregada', 'info');
       } else if (act === 'salvar-comprados') {
         const nome = prompt('Nome dos comprados:'); if (!nome) return;
         savedPurchases[nome] = Array.isArray(boughtItems) ? boughtItems.slice() : [];
