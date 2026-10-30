@@ -812,7 +812,7 @@ textarea:focus-visible {
 }
 
 .modal-content {
-    background: rgba(255,255,255,0.08);
+    background: var(--bg-surface);
     backdrop-filter: blur(14px);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-soft);
