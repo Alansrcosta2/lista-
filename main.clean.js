@@ -964,6 +964,8 @@ document.addEventListener('DOMContentLoaded', () => {
       render();
       renderComprados();
       atualizarInfoMercado();
+      // evita disparar backup automático logo após limpar
+      localStorage.setItem('lastBackup_v1', String(Date.now()));
       // Close config modal
       closeConfig();
       alert('Todos os dados locais foram limpos. Recarregue a página se necessário.');
@@ -3276,7 +3278,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   (function checkBackup() {
     const last = parseInt(localStorage.getItem('lastBackup_v1') || '0', 10) || 0;
     const dias = (Date.now() - last) / (24 * 60 * 60 * 1000);
-    if (dias >= 7 || !last) {
+    if ((dias >= 7 || !last) && Array.isArray(lista) && lista.length > 0) {
       setTimeout(() => {
         if (confirm('Já faz ' + (last ? Math.floor(dias) : 'muito tempo') + ' dias do último backup. Fazer backup agora?')) {
           fazerBackupAuto();
