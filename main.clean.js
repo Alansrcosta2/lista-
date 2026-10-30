@@ -658,10 +658,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const txt = document.getElementById('rapido-texto');
       const linhas = (txt ? txt.value : '').split('\n').map(x => x.trim()).filter(Boolean);
       let add = 0;
-      linhas.forEach(nome => {
+      linhas.forEach(linha => {
+        const m = linha.match(/^(.+?)\s+(\d+[.,]?\d*)\s*(kg|g|l|ml|pacote|un|duzia|pente)?\s*$/i);
+        let nome = linha;
+        let qtd = 1;
+        let uni = 'un';
+        if (m) {
+          nome = m[1].trim();
+          qtd = parseFloat(m[2].replace(',', '.')) || 1;
+          if (m[3]) {
+            const u = m[3].toLowerCase();
+            if (u === 'kg') uni = 'kg';
+            else if (u === 'g') uni = 'un';
+            else if (u === 'l' || u === 'ml') uni = 'litro';
+            else if (u === 'pacote') uni = 'pacote';
+            else if (u === 'duzia') uni = 'duzia';
+            else if (u === 'pente') uni = 'pente';
+          }
+        }
+        if (!nome) return;
         const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
         if (!existe) {
-          lista.push({ nome, qtd: 1, unidade: 'un', corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
+          lista.push({ nome, qtd, unidade: uni, corredor: null, categoria: catDe(nome), comprado: false, preco: null, total: null });
           add++;
         }
       });
@@ -1618,7 +1636,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         if (valor === '' || valor === null || typeof valor === 'undefined') return '-';
         const num = Number(valor);
         if (!Number.isNaN(num) && Number.isFinite(num)) {
-          return num % 1 ? num.toLocaleString('pt-BR') : num.toString();
+          const rounded = Math.round(num * 1000) / 1000;
+          if (Math.abs(rounded - Math.round(rounded)) < 0.0001) return String(Math.round(rounded));
+          return rounded.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
         }
         return String(valor);
       };
@@ -1988,7 +2008,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         if (isNaN(preco) || preco < 0) { showError('Informe um preço válido.'); return; }
         cur.preco = preco;
         if (isKg) { cur.peso = Number.isFinite(peso) && peso > 0 ? peso : null; cur.total = cur.peso ? (preco * cur.peso) : 0; }
-        else { cur.qtd = Number.isFinite(qtd) && qtd > 0 ? qtd : cur.qtd || 1; cur.total = preco * (cur.qtd || 1); }
+        else { cur.qtd = Number.isFinite(qtd) && qtd > 0 ? (Math.round(qtd * 1000) / 1000) : cur.qtd || 1; cur.total = preco * (cur.qtd || 1); }
         cur.date = new Date().toISOString();
         salvar(); editingBoughtIndex = null;
         els.valorMercado.value = ''; if (els.nomeMercado) els.nomeMercado.value = ''; if (els.pesoMercado) els.pesoMercado.value = '';
