@@ -407,6 +407,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const closeShareModal = () => {
+    if (!els.shareModal) return;
+    els.shareModal.classList.remove('visible');
+    els.shareModal.style.display = 'none';
+  };
+
   if (els.shareClose) {
     els.shareClose.addEventListener('click', closeShareModal);
   }
