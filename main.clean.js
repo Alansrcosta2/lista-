@@ -1852,6 +1852,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       div.addEventListener('click', () => {
         els.nome.value = p.nome;
         els.autocompleteList.style.display = 'none';
+        populateUnidadeOptions(p.nome);
       });
       els.autocompleteList.appendChild(div);
     });
