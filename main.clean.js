@@ -2063,6 +2063,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         updateMercadoUI(item);
         const qf = document.getElementById('qtd-mercado');
         if (qf) qf.value = item && item.qtd != null ? String(item.qtd) : '';
+        if (els.valorMercado) els.valorMercado.value = '';
         els.valorMercado.focus();
         render();
       });
