@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.lista = lista;
   let listasSalvas = JSON.parse(localStorage.getItem('savedLists_v3') || '{}');
   let ultimaCompra = JSON.parse(localStorage.getItem('ultimaCompra_v1') || '[]');
+  let despensa = JSON.parse(localStorage.getItem('despensa_v1') || '[]');
   let savedPurchases = JSON.parse(localStorage.getItem('savedPurchases_v1') || '{}');
   let selecionado = null;
   let editingBoughtIndex = null;
@@ -2098,6 +2099,18 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       }
       try {
         if (selecionado != null && selecionado >= 0) {
+          // Despensa: decrementa estoque do item comprado
+          try {
+            const nomeLow = String(it.nome || '').toLowerCase();
+            const idxD = despensa.findIndex(x => String(x.nome || '').toLowerCase() === nomeLow);
+            if (idxD >= 0) {
+              despensa[idxD].qtd = Math.max(0, (despensa[idxD].qtd || 0) - 1);
+              salvarDespensa();
+              if ((despensa[idxD].qtd || 0) <= (despensa[idxD].min || 0)) {
+                if (typeof showToast === 'function') showToast('⚠️ ' + despensa[idxD].nome + ' acabando na despensa!', 'warning');
+              }
+            }
+          } catch (_) { }
           lista.splice(selecionado, 1);
           selecionado = null;
         }
@@ -3030,5 +3043,96 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     }
   })();
 
+
+
+  // ===== DESPENSA (estoque de casa) =====
+  const modalDespensa = document.getElementById('modal-despensa');
+  const fecharDespensa = document.getElementById('fechar-despensa');
+  const despNome = document.getElementById('desp-nome');
+  const despQtd = document.getElementById('desp-qtd');
+  const despAdd = document.getElementById('desp-add');
+  const despLista = document.getElementById('desp-lista');
+  const tbDespensa = document.getElementById('tb-despensa');
+
+  function salvarDespensa() {
+    try { localStorage.setItem('despensa_v1', JSON.stringify(despensa)); } catch (_) { }
+  }
+
+  function renderDespensa() {
+    if (!despLista) return;
+    if (!Array.isArray(despensa) || despensa.length === 0) {
+      despLista.innerHTML = '<em>Despensa vazia. Adicione itens acima.</em>';
+      return;
+    }
+    despLista.innerHTML = despensa.map((it, i) => {
+      const baixo = (it.qtd || 0) <= (it.min || 0);
+      return '<div class="sugestao-item" style="flex-wrap:wrap;">' +
+        '<span>' + (emojiDe(it.nome) || '📦') + ' ' + it.nome + ' <small style="color:var(--text-secondary);">(' + (it.qtd || 0) + ' ' + (it.unidade || 'un') + (it.min ? ', mín ' + it.min : '') + ')</small>' + (baixo ? ' <strong style="color:#ef4444;">⚠️ baixo</strong>' : '') + '</span>' +
+        '<div style="display:flex; gap:4px;">' +
+          '<button data-i="' + i + '" data-act="menos" class="config-btn" style="padding:2px 8px;">−</button>' +
+          '<button data-i="' + i + '" data-act="mais" class="config-btn" style="padding:2px 8px;">+</button>' +
+          (baixo ? '<button data-i="' + i + '" data-act="comprar" class="config-btn" style="padding:2px 8px; background:var(--primary-color); color:#fff; border:none;">Comprar</button>' : '') +
+          '<button data-i="' + i + '" data-act="rem" class="config-btn" style="padding:2px 8px;">🗑️</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  if (despLista) {
+    despLista.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const i = parseInt(btn.dataset.i);
+      if (isNaN(i) || !despensa[i]) return;
+      const act = btn.dataset.act;
+      if (act === 'menos') { despensa[i].qtd = Math.max(0, (despensa[i].qtd || 0) - 1); salvarDespensa(); renderDespensa(); }
+      else if (act === 'mais') { despensa[i].qtd = (despensa[i].qtd || 0) + 1; salvarDespensa(); renderDespensa(); }
+      else if (act === 'rem') { if (confirm('Remover ' + despensa[i].nome + ' da despensa?')) { despensa.splice(i, 1); salvarDespensa(); renderDespensa(); } }
+      else if (act === 'comprar') {
+        const it = despensa[i];
+        const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(it.nome || '').toLowerCase() && !x.comprado);
+        if (!existe) {
+          lista.push({ nome: it.nome, qtd: 1, unidade: it.unidade || 'un', corredor: null, categoria: catDe(it.nome), comprado: false, preco: null, total: null });
+          salvar(); render(); atualizarInfoMercado();
+          if (typeof showToast === 'function') showToast('✅ Adicionado à lista: ' + it.nome, 'success');
+        } else {
+          if (typeof showToast === 'function') showToast('Já está na lista.', 'info');
+        }
+      }
+    });
+  }
+
+  if (despAdd) {
+    despAdd.addEventListener('click', () => {
+      const nome = (despNome ? despNome.value : '').trim();
+      const qtd = parseFloat(despQtd ? despQtd.value : '0') || 0;
+      if (!nome) { if (typeof showToast === 'function') showToast('Informe o nome do item.', 'warning'); return; }
+      const existe = despensa.some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+      if (existe) { if (typeof showToast === 'function') showToast('Já está na despensa.', 'info'); return; }
+      despensa.push({ nome, qtd, unidade: 'un', min: 1 });
+      salvarDespensa(); renderDespensa();
+      if (despNome) despNome.value = '';
+      if (despQtd) despQtd.value = '';
+      if (typeof showToast === 'function') showToast('📦 Adicionado à despensa: ' + nome, 'success');
+    });
+  }
+
+  if (tbDespensa && modalDespensa) {
+    tbDespensa.addEventListener('click', () => { modalDespensa.style.display = 'flex'; modalDespensa.classList.add('visible'); renderDespensa(); });
+  }
+  if (fecharDespensa && modalDespensa) {
+    fecharDespensa.addEventListener('click', () => { modalDespensa.classList.remove('visible'); modalDespensa.style.display = 'none'; });
+    modalDespensa.addEventListener('click', (e) => { if (e.target === modalDespensa) { modalDespensa.classList.remove('visible'); modalDespensa.style.display = 'none'; } });
+  }
+
+  // aviso de estoque baixo ao abrir
+  (function checkDespensa() {
+    const baixos = (Array.isArray(despensa) ? despensa : []).filter(x => (x.qtd || 0) <= (x.min || 0));
+    if (baixos.length > 0) {
+      setTimeout(() => {
+        if (typeof showToast === 'function') showToast('⚠️ ' + baixos.length + ' item(ns) acabando na despensa.', 'warning');
+      }, 3000);
+    }
+  })();
 
 });
