@@ -24,7 +24,7 @@ html, body {
     --border-radius-md: 18px;
     --border-radius-sm: 14px;
     --transition-base: 0.25s ease;
-    --shadow-soft: 0 16px 40px rgba(6, 12, 24, 0.45);
+    --shadow-soft: 0 10px 28px rgba(6, 12, 24, 0.28);
     --share-icon-bg-start: #25d366;
     --share-icon-bg-end: #128c7e;
     --share-icon-foreground: #ffffff;
@@ -68,9 +68,9 @@ html, body {
 
 [data-theme="light"] {
     --primary-color: #4f46e5;
-    --bg-main: #f3f4f6;
+    --bg-main: #f1f3f7;
     --bg-surface: #ffffff;
-    --bg-elevated: #f9fafb;
+    --bg-elevated: #f7f8fa;
     --header-surface: rgba(255, 255, 255, 0.92);
     --text-primary: #111827;
     --text-secondary: #6b7280;
@@ -458,17 +458,17 @@ button:hover {
 }
 
 .verde {
-    background: var(--success-bg);
+    background: var(--primary-color);
     color: #ffffff;
 }
 
 .amarelo {
-    background: var(--warning-bg);
-    color: #111827;
+    background: var(--primary-color);
+    color: #ffffff;
 }
 
 .roxo {
-    background: var(--accent-bg);
+    background: var(--primary-color);
     color: #ffffff;
 }
 
