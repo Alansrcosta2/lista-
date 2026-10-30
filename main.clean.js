@@ -3167,4 +3167,24 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     }
   })();
 
+
+  // ===== ANALYTICS SIMPLES (Supabase) =====
+  (function registrarVisita() {
+    try {
+      if (sessionStorage.getItem('visita_registrada')) return;
+      sessionStorage.setItem('visita_registrada', '1');
+      setTimeout(async () => {
+        const client = await carregarSupabase();
+        if (!client) return;
+        try {
+          await client.from('visitas').insert({
+            user_agent: navigator.userAgent || '',
+            referrer: document.referrer || '',
+            created_at: new Date().toISOString()
+          });
+        } catch (e) { console.log('[analytics] erro', e && e.message); }
+      }, 2000);
+    } catch (_) { }
+  })();
+
 });
