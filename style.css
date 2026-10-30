@@ -68,6 +68,7 @@ html, body {
 
 [data-theme="light"] {
     --primary-color: #4f46e5;
+    --text-secondary: #4b5563;
     --bg-main: #f1f3f7;
     --bg-surface: #ffffff;
     --bg-elevated: #f7f8fa;
@@ -1666,4 +1667,11 @@ input:focus, select:focus, textarea:focus {
 #rapido-texto::placeholder {
     color: var(--text-secondary);
     opacity: 0.9;
+}
+
+
+/* ===== Placeholders legíveis ===== */
+input::placeholder, textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.75;
 }
