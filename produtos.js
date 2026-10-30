@@ -3807,5 +3807,9 @@ window.produtos = [
   { "nome": "Amstel Long Neck 330ml", "categoria": "Bebidas", "emoji": "🍺", "unidade": "un" },
   { "nome": "Amstel 600ml Garrafa", "categoria": "Bebidas", "emoji": "🍺", "unidade": "un" },
   { "nome": "Amstel Pack 6 Latas 350ml", "categoria": "Bebidas", "emoji": "🍺", "unidade": "pack" },
-  { "nome": "Amstel Pack 12 Latas 350ml", "categoria": "Bebidas", "emoji": "🍺", "unidade": "pack" }
+  { "nome": "Amstel Pack 12 Latas 350ml", "categoria": "Bebidas", "emoji": "🍺", "unidade": "pack" },
+  { "nome": "Óleo de soja", "categoria": "Mercearia", "emoji": "🛢️", "unidade": "litro" },
+  { "nome": "Óleo de soja 900ml", "categoria": "Mercearia", "emoji": "🛢️", "unidade": "un" },
+  { "nome": "Óleo de milho", "categoria": "Mercearia", "emoji": "🛢️", "unidade": "litro" },
+  { "nome": "Óleo de girassol", "categoria": "Mercearia", "emoji": "🛢️", "unidade": "litro" }
   ];
