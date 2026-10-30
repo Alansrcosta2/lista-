@@ -334,26 +334,67 @@ document.addEventListener('DOMContentLoaded', () => {
   if (els.mapsNearest) {
     els.mapsNearest.addEventListener('click', async () => {
       const permissionOk = await ensurePermission('geolocation');
-      if (!permissionOk) {
-        alert('Permita o acesso à localização para buscar lojas próximas.');
-        return;
-      }
+      if (!permissionOk) { alert('Permita o acesso à localização.'); return; }
       if (!navigator.geolocation) { alert('Geolocalização não disponível.'); return; }
-      if (els.mapsLoading) { els.mapsLoading.textContent = 'Obtendo localização...'; els.mapsLoading.style.display = 'block'; }
+      if (els.mapsLoading) { els.mapsLoading.textContent = 'Buscando locais próximos...'; els.mapsLoading.style.display = 'block'; }
       if (els.mapsList) els.mapsList.innerHTML = '';
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          if (els.mapsLoading) els.mapsLoading.style.display = 'none';
-          if (els.mapsList) els.mapsList.innerHTML = '<p style="margin-bottom:10px;">Abrindo o Maps com supermercados próximos...</p>';
-          const url = 'https://www.google.com/maps/search/supermercado/@' + lat + ',' + lng + ',15z';
-          openExternalUrl(url);
-          setTimeout(closeMapsModal, 600);
+          let mostrou = false;
+          try {
+            const query = '[out:json][timeout:8];(node["shop"="supermarket"](around:3000,' + lat + ',' + lng + ');way["shop"="supermarket"](around:3000,' + lat + ',' + lng + ');node["shop"="grocery"](around:3000,' + lat + ',' + lng + '););out center body 40;';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const response = await fetch('https://overpass.kumi.systems/api/interpreter?data=' + encodeURIComponent(query), { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.elements && data.elements.length > 0) {
+                const dedup = [];
+                const seen = {};
+                data.elements.forEach(function(place) {
+                  const plat = place.lat || (place.center && place.center.lat);
+                  const plng = place.lon || (place.center && place.center.lon);
+                  if (!plat || !plng) return;
+                  const name = (place.tags && place.tags.name) || 'Loja';
+                  const key = name + '|' + plat.toFixed(3) + '|' + plng.toFixed(3);
+                  if (seen[key]) return; seen[key] = true;
+                  const street = (place.tags && place.tags['addr:street']) || '';
+                  const num = (place.tags && place.tags['addr:housenumber']) || '';
+                  const dist = Math.sqrt(Math.pow((plat - lat) * 111, 2) + Math.pow((plng - lng) * 111 * Math.cos(lat * Math.PI / 180), 2));
+                  dedup.push({ plat, plng, name, street, num, dist });
+                });
+                dedup.sort((a, b) => a.dist - b.dist);
+                if (els.mapsLoading) els.mapsLoading.style.display = 'none';
+                if (els.mapsList) els.mapsList.innerHTML = '<p style="margin-bottom:10px;">Locais próximos:</p>' + dedup.slice(0, 8).map(function(p) {
+                  return '<div class="maps-item" data-lat="' + p.plat + '" data-lng="' + p.plng + '" style="padding:10px;border:1px solid var(--border-color);border-radius:8px;margin-bottom:8px;cursor:pointer;background:var(--bg-main);"><strong>' + p.name + '</strong><br><small>' + p.street + ' ' + p.num + ' • ' + p.dist.toFixed(1) + ' km</small></div>';
+                }).join('') + '<button id="maps-more" class="config-btn" style="width:100%;padding:10px;margin-top:10px;">Ver mais no Maps</button>';
+                els.mapsList.querySelectorAll('.maps-item').forEach(item => {
+                  item.addEventListener('click', () => {
+                    const url = 'https://www.google.com/maps/dir/' + lat + ',' + lng + '/' + item.dataset.lat + ',' + item.dataset.lng;
+                    openExternalUrl(url); closeMapsModal();
+                  });
+                });
+                const moreBtn = document.getElementById('maps-more');
+                if (moreBtn) moreBtn.addEventListener('click', () => {
+                  openExternalUrl('https://www.google.com/maps/search/supermercado+perto+de+mim/@' + lat + ',' + lng + ',15z'); closeMapsModal();
+                });
+                mostrou = true;
+              }
+            }
+          } catch (e) { console.log('[maps] overpass failed', e && e.message); }
+          if (!mostrou) {
+            if (els.mapsLoading) els.mapsLoading.style.display = 'none';
+            if (els.mapsList) els.mapsList.innerHTML = '<p style="margin-bottom:10px;">Abrindo o Maps com supermercados próximos...</p>';
+            openExternalUrl('https://www.google.com/maps/search/supermercado+perto+de+mim/@' + lat + ',' + lng + ',15z');
+            setTimeout(closeMapsModal, 600);
+          }
         },
         (err) => {
           if (els.mapsLoading) els.mapsLoading.style.display = 'none';
-          alert('Não foi possível obter sua localização. Verifique as permissões.');
+          alert('Não foi possível obter sua localização.');
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
