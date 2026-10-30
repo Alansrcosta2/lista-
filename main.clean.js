@@ -550,6 +550,43 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== CONFIG MODAL =====
+  function renderLocalBase() {
+    const cont = els.localBaseContainer; if (!cont) return;
+    const items = Array.isArray(localProducts) ? localProducts : [];
+    if (items.length === 0) { cont.innerHTML = '<em>Sem itens na base local.</em>'; return; }
+    cont.innerHTML = items
+      .map((p, i) => `
+        <div class="saved-list-item">
+          <span>${p.nome}</span>
+          <div class="saved-list-actions">
+            <button class="edit-unit" data-i="${i}">Unidade: ${p.unidade || 'un'}</button>
+            <button class="delete-local" data-i="${i}">Remover</button>
+          </div>
+        </div>`).join('');
+    cont.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || !t.classList) return;
+      if (t.classList.contains('edit-unit')) {
+        const i = parseInt(t.getAttribute('data-i')); if (isNaN(i)) return;
+        const cur = items[i]; if (!cur) return;
+        let uni = prompt('Unidade para o item:', cur.unidade || 'un') || cur.unidade || 'un';
+        uni = String(uni).trim() || 'un';
+        var newCur = Object.assign({}, cur);
+        newCur.unidade = uni;
+        localProducts[i] = newCur;
+        salvar(); renderLocalBase();
+      }
+      if (t.classList.contains('delete-local')) {
+        const i = parseInt(t.getAttribute('data-i')); if (isNaN(i)) return;
+        const cur = items[i]; if (!cur) return;
+        if (confirm(`Remover "${cur.nome}" da sua base local?`)) {
+          localProducts.splice(i, 1);
+          salvar(); renderLocalBase();
+        }
+      }
+    });
+  }
+
   const openConfig = () => {
     if (!els.modalConfig) { console.log('[config] modal-config não encontrado'); alert('Configurações indisponível no momento.'); return; }
     els.modalConfig.style.display = 'flex';
