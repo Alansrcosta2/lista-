@@ -1,4 +1,4 @@
-var CACHE_NAME = 'lista-mercado-cache-v11';
+var CACHE_NAME = 'lista-mercado-cache-v12';
 var ASSETS = [
   '/',
   '/index.html',
