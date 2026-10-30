@@ -2240,46 +2240,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     });
   }
 
-  // ===== ADICIONAR POR VOZ =====
-  const vozBtn = document.getElementById('voz-btn');
-  if (vozBtn) {
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) {
-      vozBtn.style.display = 'none';
-    } else {
-      vozBtn.addEventListener('click', () => {
-        const rec = new SpeechRec();
-        rec.lang = 'pt-BR';
-        rec.interimResults = false;
-        rec.maxAlternatives = 1;
-        vozBtn.textContent = '🎙️ Ouvindo...';
-        vozBtn.disabled = true;
-        rec.onresult = (ev) => {
-          const texto = (ev.results && ev.results[0] && ev.results[0][0]) ? ev.results[0][0].transcript : '';
-          const itens = String(texto).split(/,| e |;/).map(x => x.trim()).filter(Boolean);
-          let adicionados = 0;
-          itens.forEach(nome => {
-            const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase() && !x.comprado);
-            if (!existe) {
-              lista.push({ nome, qtd: 1, unidade: 'un', categoria: catDe(nome), comprado: false, preco: null, total: null });
-              if (!existeNaBase(nome)) {
-                const existsLocal = (Array.isArray(localProducts) ? localProducts : []).some(x => String(x.nome || '').toLowerCase() === nome.toLowerCase());
-                if (!existsLocal) localProducts.push({ nome, categoria: '', unidade: 'un', emoji: emojiDe(nome) });
-              }
-              adicionados++;
-            }
-          });
-          if (adicionados > 0) { salvar(); render(); if (typeof showToast === 'function') showToast('🎤 Adicionados: ' + itens.join(', '), 'success'); }
-          else if (itens.length) { if (typeof showToast === 'function') showToast('Já estavam na lista.', 'info'); }
-          else { if (typeof showToast === 'function') showToast('Não entendi. Tente de novo.', 'warning'); }
-        };
-        rec.onerror = () => { if (typeof showToast === 'function') showToast('Erro no microfone.', 'error'); };
-        rec.onend = () => { vozBtn.textContent = '🎤 Voz'; vozBtn.disabled = false; };
-        try { rec.start(); } catch (e) { vozBtn.textContent = '🎤 Voz'; vozBtn.disabled = false; }
-      });
-    }
-  }
-
   if (els.modoMercado) {
     els.modoMercado.addEventListener('click', () => {
       modoMercadoAtivo = true; selecionado = null;
