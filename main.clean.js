@@ -356,9 +356,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const openShareModal = () => {
+    if (!els.shareModal) {
+      shareListaAtual();
+      return;
+    }
+    els.shareModal.style.display = 'flex';
+    els.shareModal.classList.add('visible');
+  };
+
   if (els.shareBtn) {
     els.shareBtn.addEventListener('click', () => {
       openShareModal();
+    });
+  }
+
+  // ===== HEADER MENU (⋯) =====
+  if (els.menuBtn && els.headerMenu) {
+    const toggleMenu = () => {
+      els.headerMenu.style.display = (els.headerMenu.style.display === 'none' || !els.headerMenu.style.display) ? 'block' : 'none';
+    };
+    const closeHeaderMenu = () => {
+      if (els.headerMenu) els.headerMenu.style.display = 'none';
+    };
+    els.menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+    document.addEventListener('click', (e) => {
+      if (!els.headerMenu.contains(e.target) && e.target !== els.menuBtn) {
+        closeHeaderMenu();
+      }
+    });
+    const headerMenuCloseBtn = els.headerMenu.querySelector('.header-menu-close');
+    if (headerMenuCloseBtn) {
+      headerMenuCloseBtn.addEventListener('click', closeHeaderMenu);
+    }
+    els.headerMenu.addEventListener('click', (e) => {
+      const act = e.target.getAttribute && e.target.getAttribute('data-action');
+      if (!act) return;
+      els.headerMenu.style.display = 'none';
+      console.log('[menu]', act);
+      if (act === 'config') { openConfig(); return; }
+      if (act === 'ajuda') { const m = document.getElementById('modal-ajuda'); if (m) { m.style.display = 'flex'; m.classList.add('visible'); } else { alert('Ajuda indisponível.'); } return; }
+      if (act === 'apagar') els.apagarLista && els.apagarLista.click();
+      else if (act === 'salvar') els.salvarLista && els.salvarLista.click();
+      else if (act === 'abrir') els.abrirListas && els.abrirListas.click();
+      else if (act === 'exportar') els.exportarDados && els.exportarDados.click();
+      else if (act === 'importar') {
+        const importBtn = document.getElementById('importar-dados');
+        if (importBtn) importBtn.click();
+      } else if (act === 'salvar-comprados') {
+        const nome = prompt('Nome dos comprados:'); if (!nome) return;
+        savedPurchases[nome] = Array.isArray(boughtItems) ? boughtItems.slice() : [];
+        localStorage.setItem('savedPurchases_v1', JSON.stringify(savedPurchases));
+        alert('Comprados salvos!');
+      } else if (act === 'abrir-comprados') {
+        const abrir = document.getElementById('abrir-comprados-salvos');
+        if (abrir) abrir.click();
+      }
     });
   }
 
