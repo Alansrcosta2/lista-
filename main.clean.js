@@ -22,15 +22,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== STATE =====
-  let lista = JSON.parse(localStorage.getItem('shoppingList_v3') || '[]');
+  // leitura tolerante a dados corrompidos no localStorage
+  const lerJSON = (chave, padrao) => {
+    try {
+      const raw = localStorage.getItem(chave);
+      if (!raw) return padrao;
+      const valor = JSON.parse(raw);
+      return valor == null ? padrao : valor;
+    } catch (_) { return padrao; }
+  };
+  let lista = lerJSON('shoppingList_v3', []);
+  if (!Array.isArray(lista)) lista = [];
   window.lista = lista;
-  let listasSalvas = JSON.parse(localStorage.getItem('savedLists_v3') || '{}');
-  let ultimaCompra = JSON.parse(localStorage.getItem('ultimaCompra_v1') || '[]');
-  let despensa = JSON.parse(localStorage.getItem('despensa_v1') || '[]');
-  let savedPurchases = JSON.parse(localStorage.getItem('savedPurchases_v1') || '{}');
+  let listasSalvas = lerJSON('savedLists_v3', {});
+  if (!listasSalvas || typeof listasSalvas !== 'object') listasSalvas = {};
+  let ultimaCompra = lerJSON('ultimaCompra_v1', []);
+  if (!Array.isArray(ultimaCompra)) ultimaCompra = [];
+  let despensa = lerJSON('despensa_v1', []);
+  if (!Array.isArray(despensa)) despensa = [];
+  let savedPurchases = lerJSON('savedPurchases_v1', {});
+  if (!savedPurchases || typeof savedPurchases !== 'object') savedPurchases = {};
   let selecionado = null;
   let editingBoughtIndex = null;
   let modoMercadoAtivo = false;
+  // início da compra atual (para o "Total da compra" não somar compras antigas)
+  let sessaoInicio = Number(localStorage.getItem('sessaoInicio_v1') || 0) || 0;
   window.addEventListener('error', (e) => { try { console.log('[error]', e.message || e); } catch (_) { } });
   window.addEventListener('unhandledrejection', (e) => { try { console.log('[unhandledrejection]', e.reason || e); } catch (_) { } });
 
@@ -135,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const ids = ['nome', 'quantidade', 'adicionar', 'modo-mercado', 'form-planejamento', 'form-mercado', 'nome-mercado', 'valor-mercado', 'peso-mercado', 'indicador-preco', 'adicionar-comprado', 'voltar-planejamento', 'lista', 'lista-comprados', 'comprados-wrapper', 'info-mercado', 'alerta-faltando', 'total-compra', 'apagar-lista', 'salvar-lista', 'abrir-listas', 'exportar-dados', 'modal-listas', 'fechar-listas', 'saved-lists-container', 'theme-toggle', 'modal-config', 'fechar-config', 'btn-limpar-banco', 'reports-btn', 'modal-relatorios', 'fechar-relatorios', 'relatorio-conteudo'];
       const missing = ids.filter(id => !document.getElementById(id));
       console.log('[diag] missing ids:', missing);
-      console.log('[diag] lista:', lista.length, 'boughtItems:', (JSON.parse(localStorage.getItem('boughtItems_v3') || '[]') || []).length);
+      console.log('[diag] lista:', lista.length, 'boughtItems:', (lerJSON('boughtItems_v3', []) || []).length);
       console.log('[diag] displays:', {
         plan: els.formPlan && getComputedStyle(els.formPlan).display,
         mercado: els.formMercado && getComputedStyle(els.formMercado).display,
@@ -427,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
           cont.innerHTML = '<em>Nenhum item esquecido — sua lista já cobre a última compra.</em>';
         } else {
           cont.innerHTML = faltando.map(it =>
-            '<div class="sugestao-item"><span>' + (emojiDe(it.nome) || '') + ' ' + it.nome + '</span><button data-nome="' + encodeURIComponent(it.nome) + '" data-qtd="' + (it.qtd || 1) + '" data-uni="' + (it.unidade || 'un') + '">+ lista</button></div>'
+            '<div class="sugestao-item"><span>' + (emojiDe(it.nome) || '') + ' ' + esc(it.nome) + '</span><button data-nome="' + encodeURIComponent(it.nome) + '" data-qtd="' + (it.qtd || 1) + '" data-uni="' + (it.unidade || 'un') + '">+ lista</button></div>'
           ).join('');
           cont.onclick = (e) => {
             const btn = e.target.closest('button');
@@ -573,6 +589,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 0);
   }
 
+  // "Finalizar peso depois": registra o preço agora e deixa o peso como pendência
+  if (els.marcarPesoDepois && els.adicionarComprado) {
+    els.marcarPesoDepois.addEventListener('click', () => {
+      if (els.pesoMercado) els.pesoMercado.value = '';
+      els.adicionarComprado.click();
+    });
+  }
+
   // ===== SPLASH =====
   const splash = document.getElementById('splash');
   if (splash) {
@@ -605,18 +629,22 @@ document.addEventListener('DOMContentLoaded', () => {
     cont.innerHTML = items
       .map((p, i) => `
         <div class="saved-list-item">
-          <span>${p.nome}</span>
+          <span>${esc(p.nome)}</span>
           <div class="saved-list-actions">
-            <button class="edit-unit" data-i="${i}">Unidade: ${p.unidade || 'un'}</button>
+            <button class="edit-unit" data-i="${i}">Unidade: ${esc(p.unidade || 'un')}</button>
             <button class="delete-local" data-i="${i}">Remover</button>
           </div>
         </div>`).join('');
-    cont.addEventListener('click', (e) => {
+  }
+
+  // listener único (antes era adicionado a cada render, executando a ação várias vezes)
+  if (els.localBaseContainer) {
+    els.localBaseContainer.addEventListener('click', (e) => {
       const t = e.target;
       if (!t || !t.classList) return;
       if (t.classList.contains('edit-unit')) {
         const i = parseInt(t.getAttribute('data-i')); if (isNaN(i)) return;
-        const cur = items[i]; if (!cur) return;
+        const cur = localProducts[i]; if (!cur) return;
         let uni = prompt('Unidade para o item:', cur.unidade || 'un') || cur.unidade || 'un';
         uni = String(uni).trim() || 'un';
         var newCur = Object.assign({}, cur);
@@ -626,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (t.classList.contains('delete-local')) {
         const i = parseInt(t.getAttribute('data-i')); if (isNaN(i)) return;
-        const cur = items[i]; if (!cur) return;
+        const cur = localProducts[i]; if (!cur) return;
         if (confirm(`Remover "${cur.nome}" da sua base local?`)) {
           localProducts.splice(i, 1);
           salvar(); renderLocalBase();
@@ -693,13 +721,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const tbComprados = document.getElementById('tb-comprados');
   if (tbComprados) tbComprados.addEventListener('click', () => {
     const sec = document.getElementById('comprados-section');
-    const wrap = document.getElementById('comprados-wrapper');
-    const toggle = document.getElementById('comprados-toggle');
-    if (sec) sec.style.display = '';
-    if (wrap) wrap.style.display = '';
-    if (toggle) toggle.setAttribute('aria-expanded', 'true');
-    try { renderComprados(); } catch (_) { }
-    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!sec) return;
+    sec.style.display = '';
+    setCompradosExpanded(true);
+    const temItens = Array.isArray(boughtItems) && boughtItems.length > 0;
+    if (temItens) {
+      try { renderComprados(); } catch (_) { }
+    } else {
+      if (els.compradosCount) els.compradosCount.textContent = '0';
+      if (els.tabelaComprados) {
+        els.tabelaComprados.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);">Nenhum item comprado ainda.</td></tr>';
+      }
+    }
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   const tbSalvar = document.getElementById('tb-salvar');
@@ -758,142 +792,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ===== RELATÓRIOS (abrir/fechar) =====
-  try {
-    const reportsBtn = document.getElementById('reports-btn');
-    const modalRel = document.getElementById('modal-relatorios');
-    const fecharRel = document.getElementById('fechar-relatorios');
-    const relContent = document.getElementById('relatorio-conteudo');
-    const exportCsvBtn = document.getElementById('exportar-relatorio-csv');
-
-    const openRel = () => {
-      if (!modalRel) return;
-      // fecha Config para evitar sobreposição
-      try { closeConfig(); } catch (_) { }
-      modalRel.style.display = 'flex';
-      modalRel.classList.add('visible');
-      // Load Chart.js via CDN if not already loaded
-if (!window.Chart) {
-  const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-  script.onload = initReportChart;
-  document.head.appendChild(script);
-} else {
-  initReportChart();
-}
-
-function initReportChart() {
-  const ctxEl = document.getElementById('relatorio-chart');
-  const ctx = ctxEl ? ctxEl.getContext('2d') : null;
-  if (!ctx) return;
-  // Example data - replace with real data retrieval
-  const labels = [];
-  const dataPoints = [];
-  // Populate with placeholder for last 30 days
-  const today = new Date();
-  for (let i = 30; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    labels.push((d.getMonth() + 1) + '/' + d.getDate());
-    dataPoints.push(0);
-  }
-  window.relatorioChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Gastos (R$)',
-        data: dataPoints,
-        borderColor: 'rgba(99,102,241,0.8)',
-        backgroundColor: 'rgba(99,102,241,0.2)',
-        tension: 0.3,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'top' } },
-    }
-  });
-}
-
-// CSV export for report
-function exportReportCSV() {
-  const bought = JSON.parse(localStorage.getItem('boughtItems_v3') || '[]');
-  if (!Array.isArray(bought) || bought.length === 0) {
-    alert('Nenhum dado de compras para exportar.');
-    return;
-  }
-  const headers = ['Produto', 'Quantidade', 'Unidade', 'Preço Unitário', 'Peso', 'Total', 'Data'];
-  const rows = bought.map(item => [
-    item.nome || '',
-    item.qtd != null ? item.qtd : '',
-    item.unidade || '',
-    item.preco != null ? item.preco : '',
-    item.peso != null ? item.peso : '',
-    item.total != null ? item.total : '',
-    item.date ? new Date(item.date).toISOString().split('T')[0] : ''
-  ]);
-  const csvContent = [headers].concat(rows).map(function(r) { return r.map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const timestamp = new Date().toISOString().slice(0,10);
-  link.href = URL.createObjectURL(blob);
-  link.download = 'relatorio_' + timestamp + '.csv';
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
-document.getElementById('exportar-relatorio-csv') && document.getElementById('exportar-relatorio-csv').addEventListener('click', exportReportCSV);
-      // conteúdo básico (placeholder se necessário)
-      if (relContent && relContent.innerHTML.trim() === '') {
-        relContent.innerHTML = '<em>Selecione um período acima para ver detalhes.</em>';
-      }
-    };
-    const closeRel = () => {
-      if (!modalRel) return;
-      modalRel.classList.remove('visible');
-      modalRel.style.display = 'none';
-    };
-
-    if (reportsBtn && modalRel) reportsBtn.addEventListener('click', openRel);
-    if (fecharRel && modalRel) fecharRel.addEventListener('click', closeRel);
-    window.addEventListener('click', (e) => { if (e.target === modalRel) closeRel(); });
-
-    if (exportCsvBtn) {
-      exportCsvBtn.addEventListener('click', function() {
-        // gera CSV simples do histórico de compras
-        var rows = [['Data', 'Produto', 'Categoria', 'Unidade', 'Qtd', 'Peso(kg)', 'Preço', 'Total']];
-        (Array.isArray(boughtItems) ? boughtItems : []).forEach(function(it) {
-          rows.push([
-            it.date || '',
-            it.nome || '',
-            it.categoria || '',
-            it.unidade || '',
-            it.qtd != null ? String(it.qtd) : '',
-            it.peso != null ? String(it.peso) : '',
-            it.preco != null ? String(it.preco) : '',
-            it.total != null ? String(it.total) : ''
-          ]);
-        });
-        var csv = rows.map(function(r) { return r.map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
-        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url; a.download = 'relatorio-' + new Date().toISOString().slice(0, 10) + '.csv';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
-    }
-  } catch (e) { console.log('[relatorios] init error', e && e.message ? e.message : e); }
 
   // ===== UTILS =====
-  let boughtItems = JSON.parse(localStorage.getItem('boughtItems_v3') || '[]');
-  let priceHistory = JSON.parse(localStorage.getItem('priceHistory_v3') || '{}');
-  let suggestedProducts = JSON.parse(localStorage.getItem('suggestedProducts_v1') || '[]');
-  let localProducts = JSON.parse(localStorage.getItem('localProducts_v1') || '[]');
-  let avgWeightPerPiece = JSON.parse(localStorage.getItem('avgWeightPerPiece_v1') || '{}');
-  let aisles = JSON.parse(localStorage.getItem('aisles_v1') || '{}');
-  let barcodeMap = JSON.parse(localStorage.getItem('barcodeMap_v1') || '{}');
+  let boughtItems = lerJSON('boughtItems_v3', []);
+  if (!Array.isArray(boughtItems)) boughtItems = [];
+  let priceHistory = lerJSON('priceHistory_v3', {});
+  if (!priceHistory || typeof priceHistory !== 'object') priceHistory = {};
+  let suggestedProducts = lerJSON('suggestedProducts_v1', []);
+  if (!Array.isArray(suggestedProducts)) suggestedProducts = [];
+  let localProducts = lerJSON('localProducts_v1', []);
+  if (!Array.isArray(localProducts)) localProducts = [];
+  let avgWeightPerPiece = lerJSON('avgWeightPerPiece_v1', {});
+  if (!avgWeightPerPiece || typeof avgWeightPerPiece !== 'object') avgWeightPerPiece = {};
+  let aisles = lerJSON('aisles_v1', {});
+  if (!aisles || typeof aisles !== 'object') aisles = {};
+  let barcodeMap = lerJSON('barcodeMap_v1', {});
+  if (!barcodeMap || typeof barcodeMap !== 'object') barcodeMap = {};
 
   /**
    * Save all data to localStorage
@@ -916,6 +830,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
    * @returns {string} Formatted currency string
    */
   const fmt = (n) => 'R$ ' + Number(n || 0).toFixed(2).replace('.', ',');
+
+  // escapa texto vindo do usuário/sincronização antes de ir para innerHTML
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const shareViaWhatsApp = async ({ title, text }) => {
     const message = (text || '').trim();
@@ -1054,8 +971,10 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
 
   const smartHistoryKey = 'smartHistory_v1';
   const smartProfileKey = 'smartProfile_v1';
-  let smartProfile = JSON.parse(localStorage.getItem(smartProfileKey) || 'null') || { local: 'supermercado' };
-  let smartHistory = JSON.parse(localStorage.getItem(smartHistoryKey) || 'null') || [];
+  let smartProfile = lerJSON(smartProfileKey, { local: 'supermercado' });
+  if (!smartProfile || typeof smartProfile !== 'object') smartProfile = { local: 'supermercado' };
+  let smartHistory = lerJSON(smartHistoryKey, []);
+  if (!Array.isArray(smartHistory)) smartHistory = [];
 
   const normalizeUnitName = (u) => {
     if (!u) return '';
@@ -1471,12 +1390,16 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         '</div>' +
       '</div>' +
       suggestedProducts.map((s, i) => '<div class="saved-list-item">' +
-          '<span>' + s.nome + '</span>' +
+          '<span>' + esc(s.nome) + '</span>' +
           '<div class="saved-list-actions">' +
             '<button class="promote-sugg" data-i="' + i + '">Promover</button>' +
             '<button class="delete-sugg" data-i="' + i + '">Remover</button>' +
           '</div>' +
         '</div>').join('');
+  }
+
+  // listener único (antes era adicionado a cada render, multiplicando as ações)
+  if (els.suggestedProductsContainer) {
     els.suggestedProductsContainer.addEventListener('click', (e) => {
       const t = e.target;
       if (t && t.id === 'clear-suggested') {
@@ -1510,10 +1433,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         suggestedProducts.splice(i, 1);
         salvar();
         renderSuggested();
-        popularCategorias();
         alert(`Item "${nome}" adicionado à sua base local.`);
       }
-    }, { once: true });
+    });
   }
 
   // ===== AUTOCOMPLETE =====
@@ -1544,7 +1466,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       const thumb = imgDe(p.nome);
       const em = (p.emoji || emojiDe(p.nome) || '');
       const media = thumb ? ('<img class="item-thumb" src="' + thumb + '" alt="" />') : (em ? ('<span class="item-emoji-badge">' + em + '</span>') : '');
-      div.innerHTML = media + '<span>' + p.nome + '</span>';
+      div.innerHTML = media + '<span>' + esc(p.nome) + '</span>';
       div.addEventListener('click', () => {
         els.nome.value = p.nome;
         els.autocompleteList.style.display = 'none';
@@ -1631,7 +1553,10 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       }
     }
 
-    els.tabela.innerHTML = dados.map((it, idx) => {
+    els.tabela.innerHTML = dados.map((it) => {
+      // idx precisa ser o índice em `lista` (dados é filtrado/ordenado, então o
+      // índice do map não corresponde ao item real para editar/excluir/selecionar)
+      const idx = lista.indexOf(it);
       const normalizeNumber = (valor) => {
         if (valor === '' || valor === null || typeof valor === 'undefined') return '-';
         const num = Number(valor);
@@ -1679,7 +1604,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       '</div>';
 
       return '<tr data-i="' + idx + '" class="linha-item ' + (selecionado === idx ? 'sel' : '') + '">' +
-          '<td>' + (function () { var t = imgDe(it.nome); return t ? ('<img class="item-thumb" src="' + t + '" alt="" />') : ('<span class="item-emoji-badge">' + (emojiDe(it.nome) || '') + '</span>'); })() + it.nome + badge + '</td>' +
+          '<td>' + (function () { var t = imgDe(it.nome); return t ? ('<img class="item-thumb" src="' + t + '" alt="" />') : ('<span class="item-emoji-badge">' + (emojiDe(it.nome) || '') + '</span>'); })() + esc(it.nome) + badge + '</td>' +
           '<td>' + quantidadeTxt + '</td>' +
           '<td>' + kgValor + '</td>' +
           '<td><div class="preco-valor">' + precoTxt + '</div>' + controles + '</td>' +
@@ -1696,6 +1621,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       b.addEventListener('click', (e) => {
         const i = Number(e.currentTarget.dataset.idx);
         lista.splice(i, 1);
+        // mantém a seleção apontando para o item correto após remover
+        if (selecionado === i) selecionado = null;
+        else if (selecionado > i) selecionado -= 1;
         salvar(); render(); atualizarInfoMercado();
       });
     });
@@ -1783,6 +1711,19 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     renderComprados();
   }
 
+  // Itens comprados na compra atual (boughtItems guarda o histórico inteiro)
+  function itensDaSessao() {
+    if (!Array.isArray(boughtItems)) return [];
+    if (!sessaoInicio) return boughtItems.slice();
+    return boughtItems.filter(i => {
+      // pendências de peso antigas continuam contando até serem resolvidas
+      if ((String(i.unidade || '').toLowerCase() === 'kg') && i.peso == null) return true;
+      if (!i.date) return true;
+      const t = new Date(i.date).getTime();
+      return !isFinite(t) || t >= sessaoInicio;
+    });
+  }
+
   function atualizarInfoMercado() {
     // Ocultar completamente no modo planejamento (problema #2)
     if (!modoMercadoAtivo) {
@@ -1793,11 +1734,12 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     // Mostrar apenas no modo mercado
     if (els.infoMercado) els.infoMercado.style.display = '';
 
+    const sessao = itensDaSessao();
     const faltam = lista.filter(i => !i.comprado).length;
     const faltamKg = lista.filter(i => !i.comprado && String(i.unidade || '').toLowerCase() === 'kg').length;
-    const pendenciasPeso = (Array.isArray(boughtItems) ? boughtItems : []).filter(x => (x.unidade || '').toLowerCase() === 'kg' && x.peso == null).length;
-    const total = boughtItems.reduce((s, i) => s + (i.total || 0), 0);
-    const listaVazia = (!Array.isArray(lista) || lista.length === 0) && (!Array.isArray(boughtItems) || boughtItems.length === 0);
+    const pendenciasPeso = sessao.filter(x => (x.unidade || '').toLowerCase() === 'kg' && x.peso == null).length;
+    const total = sessao.reduce((s, i) => s + (i.total || 0), 0);
+    const listaVazia = (!Array.isArray(lista) || lista.length === 0) && sessao.length === 0;
     const parts = [];
     if (faltam > 0) parts.push('Faltam ' + faltam + ' item(ns)');
     if (faltamKg > 0) parts.push(faltamKg + ' por kg');
@@ -1839,6 +1781,22 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     try { atualizarSugestoes(); } catch (_) { }
   }
 
+  function setCompradosExpanded(expanded) {
+    compradosExpanded = !!expanded;
+    if (els.compradosWrapper) els.compradosWrapper.style.display = compradosExpanded ? '' : 'none';
+    if (els.compradosToggle) {
+      els.compradosToggle.setAttribute('aria-expanded', compradosExpanded ? 'true' : 'false');
+      const icon = els.compradosToggle.querySelector('.toggle-icon');
+      if (icon) icon.textContent = compradosExpanded ? '▲' : '▼';
+    }
+  }
+
+  if (els.compradosToggle) {
+    els.compradosToggle.addEventListener('click', () => {
+      setCompradosExpanded(!compradosExpanded);
+    });
+  }
+
   function renderComprados() {
     if (!els.tabelaComprados) return;
     const hasComprados = boughtItems.length > 0;
@@ -1864,7 +1822,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       const totalTxt = unidade === 'kg' && it.peso == null ? '' : fmt(it.total);
       const delBtn = '<button class="btn-sm danger delete-bought" data-idx="' + bi + '" title="Excluir" style="background:transparent;border:none;padding:0;margin:0;float:right;width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;"><img src="' + trashUrl + '" alt="Excluir" style="width:18px;height:18px;object-fit:contain;opacity:0.9;" /></button>';
       const qtyCol = unidade === 'kg' ? kgTxt : (qtdTxt || '');
-      return '<tr class="linha-comprado" data-i="' + bi + '" data-nome="' + it.nome + '" title="Toque para editar"><td><span class="item-emoji-badge">' + (emojiDe(it.nome) || '') + '</span>' + it.nome + delBtn + '</td><td>' + qtyCol + '</td><td class="comprado-unit">' + precoTxt + '</td><td>' + totalTxt + '</td></tr>';
+      return '<tr class="linha-comprado" data-i="' + bi + '" data-nome="' + esc(it.nome) + '" title="Toque para editar"><td><span class="item-emoji-badge">' + (emojiDe(it.nome) || '') + '</span>' + esc(it.nome) + delBtn + '</td><td>' + qtyCol + '</td><td class="comprado-unit">' + precoTxt + '</td><td>' + totalTxt + '</td></tr>';
     }).join('');
 
     try {
@@ -1947,13 +1905,32 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       populateUnidadeOptions('');
       salvarSmartUnit();
       salvar(); render();
+      try { atualizarSugestoes(); } catch (_) { }
       try { /* showToast(`✅ Adicionado: ${nome}`); */ } catch (_) { }
     });
   }
 
+  // filtros rápidos do mercado (Todos / Por kg / Pendências)
+  const bindQuickFilter = (elemento, valor) => {
+    if (!elemento) return;
+    elemento.addEventListener('click', () => {
+      quickFilter = valor;
+      [els.qfAll, els.qfKg, els.qfPending].forEach(b => { if (b) b.classList.toggle('qf-active', b === elemento); });
+      render();
+    });
+  };
+  bindQuickFilter(els.qfAll, 'all');
+  bindQuickFilter(els.qfKg, 'kg');
+  bindQuickFilter(els.qfPending, 'pending');
+  if (els.qfAll) els.qfAll.classList.add('qf-active');
+
   if (els.modoMercado) {
     els.modoMercado.addEventListener('click', () => {
       modoMercadoAtivo = true; selecionado = null;
+      if (!sessaoInicio) {
+        sessaoInicio = Date.now();
+        try { localStorage.setItem('sessaoInicio_v1', String(sessaoInicio)); } catch (_) { }
+      }
       els.formPlan.style.display = 'none';
       els.formMercado.style.display = '';
       document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = '');
@@ -1967,26 +1944,42 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   }
 
   if (els.voltarPlan) {
-    els.voltarPlan.addEventListener('click', () => {
-      modoMercadoAtivo = false; selecionado = null;
-      // rollover: itens comprados saem da lista ativa (já salvos em boughtItems); não comprados ficam
-      if (Array.isArray(boughtItems) && boughtItems.length) {
-        ultimaCompra = boughtItems.slice();
-        try { localStorage.setItem('ultimaCompra_v1', JSON.stringify(ultimaCompra)); } catch (_) { }
+    els.voltarPlan.addEventListener('click', async () => {
+      // Conferência: avisa sobre os itens que ficaram para trás antes de sair
+      const faltando = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
+      if (faltando.length) {
+        const sair = await mostrarConferencia();
+        if (!sair) return; // usuário escolheu continuar comprando
       }
-      lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
-      window.lista = lista;
-      els.formPlan.style.display = '';
-      els.formMercado.style.display = 'none';
-      document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = 'none');
-      // auto-expandir ao sair do Mercado
-      listaColapsada = false;
-      if (els.listaWrapper) els.listaWrapper.style.display = '';
-      if (els.quickFilters) els.quickFilters.style.display = 'none';
-      quickFilter = 'all';
-      salvar(); render(); atualizarInfoMercado();
-      console.log('[mercado] desativado (rollover aplicado)');
+      sairDoMercado();
     });
+  }
+
+  function sairDoMercado() {
+    // "última compra" = somente os itens desta sessão (boughtItems guarda o histórico)
+    const compradosSessao = itensDaSessao();
+    modoMercadoAtivo = false; selecionado = null;
+    // encerra a sessão: o próximo "Modo Mercado" começa um total novo
+    sessaoInicio = 0;
+    try { localStorage.removeItem('sessaoInicio_v1'); } catch (_) { }
+    // rollover: itens comprados saem da lista ativa (já salvos em boughtItems); não comprados ficam
+    if (compradosSessao.length) {
+      ultimaCompra = compradosSessao.slice();
+      try { localStorage.setItem('ultimaCompra_v1', JSON.stringify(ultimaCompra)); } catch (_) { }
+    }
+    lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
+    window.lista = lista;
+    if (els.formPlan) els.formPlan.style.display = '';
+    if (els.formMercado) els.formMercado.style.display = 'none';
+    document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = 'none');
+    // auto-expandir ao sair do Mercado
+    listaColapsada = false;
+    if (els.listaWrapper) els.listaWrapper.style.display = '';
+    if (els.quickFilters) els.quickFilters.style.display = 'none';
+    quickFilter = 'all';
+    [els.qfAll, els.qfKg, els.qfPending].forEach(b => { if (b) b.classList.toggle('qf-active', b === els.qfAll); });
+    salvar(); render(); atualizarInfoMercado();
+    console.log('[mercado] desativado (rollover aplicado)');
   }
 
   // ===== TOGGLE: Recolher lista (estado mantido sem botão visível por enquanto) =====
@@ -2007,9 +2000,18 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         const isKg = String(cur.unidade || '').toLowerCase() === 'kg';
         if (isNaN(preco) || preco < 0) { showError('Informe um preço válido.'); return; }
         cur.preco = preco;
-        if (isKg) { cur.peso = Number.isFinite(peso) && peso > 0 ? peso : null; cur.total = cur.peso ? (preco * cur.peso) : 0; }
+        if (isKg) { cur.peso = Number.isFinite(peso) && peso > 0 ? peso : null; cur.total = cur.peso ? (preco * cur.peso) : 0; if (cur.peso) cur.pendingWeight = false; }
         else { cur.qtd = Number.isFinite(qtd) && qtd > 0 ? (Math.round(qtd * 1000) / 1000) : cur.qtd || 1; cur.total = preco * (cur.qtd || 1); }
         cur.date = new Date().toISOString();
+        // se era um item kg pendente que ainda estava na lista ativa, finaliza/remove de lá
+        if (isKg) {
+          const idxL = lista.findIndex(x => x && x.comprado && String(x.nome || '').toLowerCase() === String(cur.nome || '').toLowerCase() && x.total == null);
+          if (idxL >= 0) {
+            lista.splice(idxL, 1);
+            if (selecionado === idxL) selecionado = null;
+            else if (selecionado > idxL) selecionado -= 1;
+          }
+        }
         salvar(); editingBoughtIndex = null;
         els.valorMercado.value = ''; if (els.nomeMercado) els.nomeMercado.value = ''; if (els.pesoMercado) els.pesoMercado.value = '';
         const totalInput2 = document.getElementById('total-mercado'); if (totalInput2) totalInput2.value = '';
@@ -2021,11 +2023,17 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       const preco = parseFloat((els.valorMercado.value || '').replace(',', '.'));
       if (isNaN(preco) || preco < 0) { showError('Informe um preço válido.'); return; }
       const it = lista[selecionado];
+      if (!it) { selecionado = null; showWarning('Item não encontrado. Selecione novamente.'); render(); return; }
       let peso = parseFloat((els.pesoMercado?.value || '').replace(',', '.')) || 0;
       const uni = (it.unidade || '').toLowerCase();
       const qtdReal = parseFloat((document.getElementById('qtd-mercado')?.value || '').replace(',', '.'));
       const kgToggle = !!(els.compraKg && els.compraKg.checked);
       const isKg = (uni === 'kg') || kgToggle;
+      // evita duplicar item se o botão for tocado duas vezes (kg pendente ainda pode ser finalizado)
+      if (it.comprado && !(isKg && it.total == null)) {
+        showWarning('Este item já foi comprado.');
+        return;
+      }
       // Se for kg e total informado, derivar peso = total/preco
       if (isKg) {
         const totalInformado = parseFloat((document.getElementById('total-mercado')?.value || '').replace(',', '.')) || 0;
@@ -2130,7 +2138,9 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
         }
       }
       try {
-        if (selecionado != null && selecionado >= 0) {
+        if (selecionado != null && selecionado >= 0 && !(isKg && (!peso || peso <= 0))) {
+          // itens kg com peso pendente ficam na lista até o peso ser finalizado
+          // (ao sair do Mercado o rollover remove os comprados)
           // Despensa: decrementa estoque do item comprado
           try {
             const nomeLow = String(it.nome || '').toLowerCase();
@@ -2165,9 +2175,18 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   // ===== AJUDA =====
 
   // ===== UI FUNCTIONS (Silenciadas a pedido do usuário) =====
-  const showError = (msg) => { console.error('[erro]', msg); };
-  const showWarning = (msg) => { console.warn('[aviso]', msg); };
-  const showSuccess = (msg) => { console.log('[sucesso]', msg); };
+  const showError = (msg) => {
+    console.error('[erro]', msg);
+    try { if (typeof window.showToast === 'function') window.showToast(msg, 'error'); } catch (_) { }
+  };
+  const showWarning = (msg) => {
+    console.warn('[aviso]', msg);
+    try { if (typeof window.showToast === 'function') window.showToast(msg, 'warning'); } catch (_) { }
+  };
+  const showSuccess = (msg) => {
+    console.log('[sucesso]', msg);
+    try { if (typeof window.showToast === 'function') window.showToast(msg, 'success'); } catch (_) { }
+  };
   const modalAjuda = document.getElementById('modal-ajuda');
   const fecharAjuda = document.getElementById('fechar-ajuda');
   if (fecharAjuda && modalAjuda) fecharAjuda.addEventListener('click', () => { modalAjuda.classList.remove('visible'); modalAjuda.style.display = 'none'; });
@@ -2228,6 +2247,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       lista = [];
       boughtItems = [];
       priceHistory = {};
+      sessaoInicio = 0;
+      try { localStorage.removeItem('sessaoInicio_v1'); } catch (_) { }
       salvar(); render(); atualizarInfoMercado();
     });
   }
@@ -2322,10 +2343,10 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     nomes.forEach(n => {
       const div = document.createElement('div');
       div.className = 'saved-list-item';
-      div.innerHTML = '<span>' + n + '</span>' +
+      div.innerHTML = '<span>' + esc(n) + '</span>' +
         '<div class="saved-list-actions">' +
-          '<button class="load-btn" data-type="lista" data-n="' + n + '">Carregar</button>' +
-          '<button class="delete-btn" data-type="lista" data-n="' + n + '">Excluir</button>' +
+          '<button class="load-btn" data-type="lista" data-n="' + encodeURIComponent(n) + '">Carregar</button>' +
+          '<button class="delete-btn" data-type="lista" data-n="' + encodeURIComponent(n) + '">Excluir</button>' +
         '</div>';
       els.savedListsContainer.appendChild(div);
     });
@@ -2334,18 +2355,17 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       nomesComprados.forEach(n => {
         const div = document.createElement('div');
         div.className = 'saved-list-item';
-        div.innerHTML = '<span>' + n + '</span>' +
+        div.innerHTML = '<span>' + esc(n) + '</span>' +
           '<div class="saved-list-actions">' +
-            '<button class="load-btn" data-type="comprados" data-n="' + n + '">Carregar</button>' +
-            '<button class="delete-btn" data-type="comprados" data-n="' + n + '">Excluir</button>' +
+            '<button class="load-btn" data-type="comprados" data-n="' + encodeURIComponent(n) + '">Carregar</button>' +
+            '<button class="delete-btn" data-type="comprados" data-n="' + encodeURIComponent(n) + '">Excluir</button>' +
           '</div>';
         els.savedListsContainer.appendChild(div);
       });
     }
-    els.savedListsContainer.addEventListener('click', onClickSavedLists, { once: true });
   };
   const onClickSavedLists = (e) => {
-    const n = e.target.dataset.n; if (!n) return;
+    const n = decodeURIComponent(e.target.dataset.n || ''); if (!n) return;
     const type = e.target.dataset.type || 'lista';
     if (e.target.classList.contains('load-btn')) {
       if (type === 'lista') {
@@ -2364,6 +2384,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   };
   if (els.abrirListas) els.abrirListas.addEventListener('click', abrirModalListas);
   if (els.fecharListas) els.fecharListas.addEventListener('click', fecharModalListas);
+  if (els.savedListsContainer) els.savedListsContainer.addEventListener('click', onClickSavedLists);
   window.addEventListener('click', (e) => { if (e.target === els.modalListas) fecharModalListas(); });
 
   // Botão adicional para abrir comprados salvos (problema #11)
@@ -2371,12 +2392,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   if (btnAbrirCompradosSalvos) {
     btnAbrirCompradosSalvos.addEventListener('click', abrirModalListas);
   }
-
-  // Fallback de delegação para abrir listas salvas
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest && e.target.closest('#abrir-listas');
-    if (btn) { console.log('[listas] open (delegation)'); abrirModalListas(); }
-  });
 
   // ===== FILTERS & INIT =====
   // pesquisa removida da UI
@@ -2559,7 +2574,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
               if (data.theme) applyTheme(data.theme);
               salvar();
               render();
-              popularCategorias();
               atualizarInfoMercado();
               closePrev();
               console.log('[import] applied', mode || 'merge', { lista: lista.length, bought: boughtItems.length });
@@ -2591,6 +2605,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
 
   const abrirRel = () => {
     if (!modalRel) return;
+    // fecha Config para evitar sobreposição
+    try { closeConfig(); } catch (_) { }
     modalRel.style.display = 'flex';
     modalRel.classList.add('visible');
     atualizarRelatorio(0);
@@ -2603,11 +2619,6 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
   if (reportsBtn) reportsBtn.addEventListener('click', abrirRel);
   if (fecharRelBtn) fecharRelBtn.addEventListener('click', closeRel);
   window.addEventListener('click', (e) => { if (e.target === modalRel) closeRel(); });
-  // Fallback de delegação para Relatórios
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest && e.target.closest('#reports-btn');
-    if (btn) { console.log('[reports] open (delegation)'); abrirRel(); }
-  });
 
   function atualizarRelatorio(periodoDias) {
     if (!relConteudo) return;
@@ -2633,32 +2644,34 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
 
     // desenhar gráfico de barras simples
     if (relCanvas) {
-      const ctx = relCanvas.getContext('2d');
-      const data = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
-      ctx.clearRect(0, 0, relCanvas.width, relCanvas.height);
-      const padding = 28, gap = 8;
-      const w = relCanvas.width - padding * 2;
-      const h = relCanvas.height - padding * 2;
-      const max = Math.max(1, ...data.map(d => d[1]));
-      const barW = data.length ? Math.max(10, (w - gap * (data.length - 1)) / data.length) : 0;
-      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim() || '#6366f1';
-      ctx.font = '12px Roboto, sans-serif';
-      ctx.fillStyle = '#999';
-      ctx.fillText('Total: ' + fmt(total), padding, padding - 8);
-      data.forEach((d, i) => {
-        const x = padding + i * (barW + gap);
-        const barH = max ? (d[1] / max) * h : 0;
-        const y = padding + (h - barH);
-        // bar
-        ctx.fillStyle = '#6366f1';
-        if (document.body.dataset.theme === 'dark') ctx.fillStyle = '#8b5cf6';
-        ctx.fillRect(x, y, barW, barH);
-        // label
-        ctx.fillStyle = '#bbb';
-        if (document.body.dataset.theme === 'dark') ctx.fillStyle = '#ddd';
-        const label = d[0].slice(0, 8);
-        ctx.fillText(label, x, padding + h + 14);
-      });
+      const ctx = relCanvas.getContext && relCanvas.getContext('2d');
+      if (ctx) {
+        const data = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+        ctx.clearRect(0, 0, relCanvas.width, relCanvas.height);
+        const padding = 28, gap = 8;
+        const w = relCanvas.width - padding * 2;
+        const h = relCanvas.height - padding * 2;
+        const max = Math.max(1, ...data.map(d => d[1]));
+        const barW = data.length ? Math.max(10, (w - gap * (data.length - 1)) / data.length) : 0;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim() || '#6366f1';
+        ctx.font = '12px Roboto, sans-serif';
+        ctx.fillStyle = '#999';
+        ctx.fillText('Total: ' + fmt(total), padding, padding - 8);
+        data.forEach((d, i) => {
+          const x = padding + i * (barW + gap);
+          const barH = max ? (d[1] / max) * h : 0;
+          const y = padding + (h - barH);
+          // bar
+          ctx.fillStyle = '#6366f1';
+          if (document.body.dataset.theme === 'dark') ctx.fillStyle = '#8b5cf6';
+          ctx.fillRect(x, y, barW, barH);
+          // label
+          ctx.fillStyle = '#bbb';
+          if (document.body.dataset.theme === 'dark') ctx.fillStyle = '#ddd';
+          const label = d[0].slice(0, 8);
+          ctx.fillText(label, x, padding + h + 14);
+        });
+      }
     }
 
     // atualizar handler de export para CSV do período atual
@@ -2752,7 +2765,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     if (!sug.length) { sugestoesContainer.style.display = 'none'; sugestoesContainer.innerHTML = ''; return; }
     sugestoesContainer.style.display = '';
     sugestoesContainer.innerHTML = '<h4>💡 Sugestões (compra recorrente)</h4>' +
-      sug.map(s => '<div class="sugestao-item"><span>' + s.nome + ' <small style="color:var(--text-secondary);">(' + s.dias + ' dias)</small></span><button data-nome="' + encodeURIComponent(s.nome) + '">+ lista</button></div>').join('');
+      sug.map(s => '<div class="sugestao-item"><span>' + esc(s.nome) + ' <small style="color:var(--text-secondary);">(' + s.dias + ' dias)</small></span><button data-nome="' + encodeURIComponent(s.nome) + '">+ lista</button></div>').join('');
   }
 
   if (sugestoesContainer) {
@@ -2768,7 +2781,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       const existe = (Array.isArray(lista) ? lista : []).some(x => String(x.nome || '').toLowerCase() === String(nome).toLowerCase() && !x.comprado);
       if (!existe) {
         lista.push({ nome, qtd: 1, unidade: uni || 'un', categoria: (p && p.categoria) ? p.categoria : catDe(nome), comprado: false, preco: null, total: null });
-        salvar(); render();
+        salvar(); render(); atualizarSugestoes();
         if (typeof showToast === 'function') showToast('✅ Adicionado: ' + nome, 'success');
       } else {
         if (typeof showToast === 'function') showToast('Já está na lista: ' + nome, 'info');
@@ -2792,7 +2805,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
       confResolver = resolve;
       if (confConteudo) {
         confConteudo.innerHTML = '<p><strong>Faltaram ' + faltando.length + ' item(ns):</strong></p>' +
-          '<ul style="margin:6px 0 0 18px;">' + faltando.map(x => '<li>' + (emojiDe(x.nome) || '') + ' ' + x.nome + ' (' + x.qtd + ' ' + x.unidade + ')</li>').join('') + '</ul>' +
+          '<ul style="margin:6px 0 0 18px;">' + faltando.map(x => '<li>' + (emojiDe(x.nome) || '') + ' ' + esc(x.nome) + ' (' + esc(x.qtd) + ' ' + esc(x.unidade) + ')</li>').join('') + '</ul>' +
           '<p style="margin-top:8px; color:var(--text-secondary);">Deseja sair mesmo assim?</p>';
       }
       if (modalConf) { modalConf.style.display = 'flex'; modalConf.classList.add('visible'); }
@@ -2806,41 +2819,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     confSair.addEventListener('click', () => { modalConf.classList.remove('visible'); modalConf.style.display = 'none'; if (confResolver) { confResolver(true); confResolver = null; } });
   }
 
-  // interceptar voltar para planejamento
-  if (els.voltarPlan) {
-    // wrap existing handler by re-binding: remove old listeners not possible; instead add capture-phase guard
-  }
-  // We'll patch the button click via a capture listener that prevents default and shows conf
-  const voltarBtn = els.voltarPlan;
-  if (voltarBtn) {
-    voltarBtn.addEventListener('click', async (e) => {
-      // only act if market mode active
-      if (!modoMercadoAtivo) return;
-      const faltando = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
-      if (!faltando.length) return; // let original handler run
-      e.stopImmediatePropagation();
-      e.preventDefault();
-      const sair = await mostrarConferencia();
-      if (sair) {
-        modoMercadoAtivo = false; selecionado = null;
-        // rollover: itens comprados saem da lista ativa
-        if (Array.isArray(boughtItems) && boughtItems.length) {
-          ultimaCompra = boughtItems.slice();
-          try { localStorage.setItem('ultimaCompra_v1', JSON.stringify(ultimaCompra)); } catch (_) { }
-        }
-        lista = (Array.isArray(lista) ? lista : []).filter(x => !x.comprado);
-        window.lista = lista;
-        if (els.formPlan) els.formPlan.style.display = '';
-        if (els.formMercado) els.formMercado.style.display = 'none';
-        document.querySelectorAll('.coluna-mercado').forEach(td => td.style.display = 'none');
-        listaColapsada = false;
-        if (els.listaWrapper) els.listaWrapper.style.display = '';
-        if (els.quickFilters) els.quickFilters.style.display = 'none';
-        quickFilter = 'all';
-        salvar(); render(); atualizarInfoMercado();
-      }
-    }, true);
-  }
+  // (o clique em "Voltar para Planejamento" é tratado por sairDoMercado(), acima)
 
   // ===== TOAST VISUAL =====
   (function initToast() {
@@ -3066,7 +3045,8 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     const dias = (Date.now() - last) / (24 * 60 * 60 * 1000);
     if ((dias >= 7 || !last) && Array.isArray(lista) && lista.length > 0) {
       setTimeout(() => {
-        if (confirm('Já faz ' + (last ? Math.floor(dias) : 'muito tempo') + ' dias do último backup. Fazer backup agora?')) {
+        const tempoTxt = last ? (Math.floor(dias) + ' dias') : 'muito tempo';
+        if (confirm('Já faz ' + tempoTxt + ' desde o último backup. Fazer backup agora?')) {
           fazerBackupAuto();
         } else {
           localStorage.setItem('lastBackup_v1', String(Date.now()));
@@ -3099,7 +3079,7 @@ document.getElementById('exportar-relatorio-csv') && document.getElementById('ex
     despLista.innerHTML = despensa.map((it, i) => {
       const baixo = (it.qtd || 0) <= (it.min || 0);
       return '<div class="sugestao-item" style="flex-wrap:wrap;">' +
-        '<span>' + (emojiDe(it.nome) || '📦') + ' ' + it.nome + ' <small style="color:var(--text-secondary);">(' + (it.qtd || 0) + ' ' + (it.unidade || 'un') + (it.min ? ', mín ' + it.min : '') + ')</small>' + (baixo ? ' <strong style="color:#ef4444;">⚠️ baixo</strong>' : '') + '</span>' +
+        '<span>' + (emojiDe(it.nome) || '📦') + ' ' + esc(it.nome) + ' <small style="color:var(--text-secondary);">(' + (it.qtd || 0) + ' ' + (it.unidade || 'un') + (it.min ? ', mín ' + it.min : '') + ')</small>' + (baixo ? ' <strong style="color:#ef4444;">⚠️ baixo</strong>' : '') + '</span>' +
         '<div style="display:flex; gap:4px;">' +
           '<button data-i="' + i + '" data-act="menos" class="config-btn" style="padding:2px 8px;">−</button>' +
           '<button data-i="' + i + '" data-act="mais" class="config-btn" style="padding:2px 8px;">+</button>' +

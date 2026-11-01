@@ -1,27 +1,29 @@
-var CACHE_NAME = 'lista-mercado-cache-v14';
+var CACHE_NAME = 'lista-mercado-cache-v15';
 var ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/main.clean.js',
-  '/produtos.js',
-  '/manifest.json',
-  '/icons/icon.png',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/splash.png',
-  '/menu-icons/sol.png',
-  '/menu-icons/lua-crescente.png',
-  '/menu-icons/definicoes.png',
-  '/menu-icons/icons8-lixeira-480.png',
-  '/menu-icons/icons8-logotipo-do-whatsapp-100.png',
-  '/menu-icons/marcador-de-localizacao.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/splash.png',
+  './menu-icons/sol.png',
+  './menu-icons/lua-crescente.png',
+  './menu-icons/definicoes.png',
+  './menu-icons/icons8-lixeira-480.png',
+  './menu-icons/icons8-logotipo-do-whatsapp-100.png',
+  './menu-icons/marcador-de-localizacao.png'
 ];
 
 self.addEventListener('install', function(event) {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) { return cache.addAll(ASSETS); })
+    caches.open(CACHE_NAME).then(function(cache) {
+      // addAll() falha inteiro se um único arquivo faltar; usar add() individual
+      return Promise.all(ASSETS.map(function(url) {
+        return cache.add(url).catch(function() { /* ignora 404 */ });
+      }));
+    })
   );
 });
 
@@ -51,14 +53,21 @@ self.addEventListener('fetch', function(event) {
           caches.open(CACHE_NAME).then(function(cache) { cache.put(request, copy); });
           return response;
         })
-        .catch(function() { return caches.match(request); })
+        .catch(function() {
+          return caches.match(request).then(function(cached) {
+            return cached || caches.match('./index.html');
+          });
+        })
     );
   } else {
     event.respondWith(
       caches.match(request).then(function(cached) {
         return cached || fetch(request).then(function(response) {
-          var copy = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) { cache.put(request, copy); });
+          // não guarda respostas de erro (404, 500...) no cache
+          if (response && response.ok) {
+            var copy = response.clone();
+            caches.open(CACHE_NAME).then(function(cache) { cache.put(request, copy); });
+          }
           return response;
         });
       })

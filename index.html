@@ -286,7 +286,7 @@
         </div>
 
         <!-- Filtros rápidos no Mercado -->
-        <div id="quick-filters" style="display:none; margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <div id="quick-filters" style="display:none; margin-top:8px; gap:8px; flex-wrap:wrap;">
             <button id="qf-all" class="config-btn">Todos</button>
             <button id="qf-kg" class="config-btn">Por kg</button>
             <button id="qf-pending" class="config-btn">Pendências</button>
@@ -324,15 +324,20 @@
                             <th>Total</th>
                         </tr>
                     </thead>
+                    <tbody></tbody>
                 </table>
-                <div id="buttons-bar" class="buttons">
-                    <button id="apagar-lista" class="vermelho">Apagar Lista</button>
-                    <button id="salvar-lista" class="verde">Salvar Lista</button>
-                    <button id="abrir-listas" class="azul">Abrir Lista</button>
-                    <button id="abrir-comprados-salvos" class="roxo">Abrir Comprados Salvos</button>
-                    <button id="importar-dados" class="roxo">Importar Dados</button>
-                </div>
             </div>
+        </div>
+
+        <!-- Ações legadas mantidas no DOM (a barra superior e o menu ⋯ já expõem
+             Salvar/Abrir/Apagar/Importar). Ocultas para não poluir a tela. -->
+        <div id="buttons-bar" class="buttons" style="display:none;">
+            <button id="apagar-lista" class="vermelho">Apagar Lista</button>
+            <button id="salvar-lista" class="verde">Salvar Lista</button>
+            <button id="abrir-listas" class="azul">Abrir Lista</button>
+            <button id="abrir-comprados-salvos" class="roxo">Abrir Comprados Salvos</button>
+            <button id="importar-dados" class="roxo">Importar Dados</button>
+            <button id="exportar-dados" class="roxo">Exportar Dados</button>
         </div>
 
 
