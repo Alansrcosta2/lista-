@@ -2702,8 +2702,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
         const isSecure = location.protocol === 'https:' || isLocalhost || location.protocol === 'file:';
         if (!isSecure) { console.log('[sw] não registrado: contexto inseguro'); return; }
+        // Recarrega automaticamente quando uma nova versão do app for ativada (apenas em atualização, não na 1ª instalação)
+        if (navigator.serviceWorker.controller) {
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+        }
         navigator.serviceWorker.register('./service-worker.js')
-          .then(reg => { console.log('[sw] registrado', reg.scope); })
+          .then(reg => { console.log('[sw] registrado', reg.scope); try { reg.update(); } catch (_) {} })
           .catch(err => { console.log('[sw] erro no registro', err && err.message ? err.message : err); });
       });
     }
